@@ -1,0 +1,3 @@
+aiozmq
+shellish>=3
+psutil
