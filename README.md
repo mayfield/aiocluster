@@ -19,7 +19,7 @@ Features
 * Diagnostic web server interface
 * Basic multi process support (pre-fork)
 * Integrated ZeroMQ for cluster management
-  Bring your favorite asyncio patterns and libraries!!!
+* Bring your favorite asyncio patterns and libraries!!!
 
 
 Installation
