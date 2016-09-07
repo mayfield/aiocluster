@@ -28,10 +28,10 @@ setup(
     test_suite='test',
     install_requires=requirements,
     entry_points = {
-        'console_scripts': ['aiocluster=aiocluster.cli:entry'],
+        'console_scripts': ['aiocluster=aiocluster.cli.aiocluster:entry'],
     },
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',

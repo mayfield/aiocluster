@@ -58,3 +58,5 @@ target/
 
 .cscope_db
 .cscope_files
+
+*.swp

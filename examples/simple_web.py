@@ -1,3 +1,6 @@
+"""
+To run `python3 ./simple_web.py`
+"""
 
 import aiocluster
 import aiohttp.web
@@ -7,18 +10,13 @@ import logging
 import uvloop
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-
 loop = asyncio.get_event_loop()
-logging.basicConfig(level=30)
+logging.basicConfig(level=logging.DEBUG)
 counter = itertools.count()
 
 
 def info(request):
-    i = next(counter)
-    if i % 1000 == 0:
-        print(i)
-    return aiohttp.web.Response(body=b'')
+    return aiohttp.web.Response(body=b'%d' % next(counter))
 
 
 def child(ident, context):
@@ -34,13 +32,9 @@ async def server():
 
 
 def parent():
-    coord = aiocluster.Coordinator('simple_prefork_web:child',
-                                   worker_count=4)
+    coord = aiocluster.Coordinator('simple_web:child', worker_count=6)
     loop.run_until_complete(coord.start())
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        loop.close()
+    loop.run_forever()
 
 if __name__ == '__main__':
     parent()

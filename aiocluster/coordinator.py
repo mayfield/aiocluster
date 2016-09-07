@@ -19,11 +19,11 @@ class Coordinator(service.AIOService):
     term_timeout = 5
     kill_timeout = 1
 
-    def __init__(self, worker_spec, worker_count=cpu_count(),
+    def __init__(self, worker_spec, worker_count=None,
                  worker_exit_action=None, handle_sigterm=True,
                  handle_sigint=True, loop=None, **kwargs):
         self.worker_spec = worker_spec
-        self.worker_count = worker_count
+        self.worker_count = worker_count or cpu_count()
         self.workers = []
         self.monitors = []
         self.handle_sigterm = handle_sigterm

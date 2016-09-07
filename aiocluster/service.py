@@ -20,6 +20,6 @@ class AIOService(object):
         """ Setup and start any network listeners here. """
         raise NotImplementedError("pure virtual")
 
-    async def cleanup(self):
+    async def stop(self):
         """ Perform any ioloop cleanup here. """
         raise NotImplementedError("pure virtual")

@@ -37,9 +37,10 @@ class WorkerProcess(object):
     identer = itertools.count()
 
     def __init__(self, spec, pycmd, pyflags, bootloader=default_bootloader,
-                 loop=None, context=None, error_verbosity='traceback', args=None,
+                 loop=None, context=None, error_verbosity=None, args=None,
                  kwargs=None):
         self.process = None
+        self.util = None
         self.ident = next(self.identer)
         self.created = self._now()
         self.spec = spec
@@ -50,25 +51,24 @@ class WorkerProcess(object):
             "kwargs": kwargs or {},
             "context": context or {}
         })
-        self._cmd = pycmd, *pyflags, '-m', bootloader, spec, str(self.ident), \
-            '--error-verbosity', error_verbosity
+        self._cmd = pycmd, *pyflags, '-m', bootloader, spec, str(self.ident)
+        if error_verbosity is not None:
+            self._cmd += '--error-verbosity', error_verbosity
 
     def __str__(self):
-        return '<%s %s ident=%d, pid=%s, age=%s>' % (type(self).__name__,
-            self.spec, self.ident, self.process and self.process.pid,
-            self.age())
+        return '<%s:%d [%s] pid=%s, age=%s, cpu=%s>' % (type(self).__name__,
+            self.ident, self.spec, self.process and self.process.pid,
+            self.age(), self.util and self.util.cpu_percent(None))
 
     def _now(self):
         return datetime.datetime.now()
 
     def age(self):
-        return self._now() - self.created
+        elapsed = self._now().timestamp() - self.created.timestamp()
+        return datetime.timedelta(seconds=round(elapsed))
 
     async def start(self):
         self.process = await asyncio.create_subprocess_exec(*self._cmd,
             env=self._env, loop=self.loop)
         self.util = psutil.Process(self.process.pid)
         self.util.cpu_percent(None)  # prime cpu usage stat
-
-    async def wait(self):
-        return await self.process.wait()
