@@ -17,17 +17,18 @@ class SpawnTests(base.AIOTestCase):
 
     async def test_bootloader_loop_arg(self, loop=None):
         wp = await worker.spawn('test.worker:bootloader_test_fn', args=(123,),
-                                  loop=loop)
+                                loop=loop)
         self.assertEqual(await wp.process.wait(), 123)
 
     async def test_bootloader_loop_kwarg(self, loop=None):
         wp = await worker.spawn('test.worker:bootloader_test_fn2',
-                                  kwargs={"a": 123}, loop=loop)
+                                kwargs={"a": 123}, loop=loop)
         self.assertEqual(await wp.process.wait(), 123)
 
     async def test_bad_modules(self, loop=None):
-        wp = await worker.spawn('doestnotexist:func', error_verbosity='pretty',
-                                  loop=loop)
+        settings = {"error_verbosity": 'pretty'}
+        wp = await worker.spawn('doestnotexist:func', settings=settings,
+                                loop=loop)
         self.assertEqual(await wp.process.wait(), 1)
 
 

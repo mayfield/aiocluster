@@ -37,7 +37,7 @@ class WorkerProcess(object):
     identer = itertools.count()
 
     def __init__(self, spec, pycmd, pyflags, bootloader=default_bootloader,
-                 loop=None, context=None, error_verbosity=None, args=None,
+                 loop=None, settings=None, context=None, args=None,
                  kwargs=None):
         self.process = None
         self.util = None
@@ -49,11 +49,10 @@ class WorkerProcess(object):
         self._env["_AIOCLUSTER_BOOTLOADER"] = env.encode({
             "args": args or (),
             "kwargs": kwargs or {},
-            "context": context or {}
+            "context": context or {},
+            "settings": settings or {}
         })
         self._cmd = pycmd, *pyflags, '-m', bootloader, spec, str(self.ident)
-        if error_verbosity is not None:
-            self._cmd += '--error-verbosity', error_verbosity
 
     def __str__(self):
         return '<%s:%d [%s] pid=%s, age=%s>' % (type(self).__name__,

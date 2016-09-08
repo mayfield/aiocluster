@@ -6,12 +6,10 @@ import aiocluster
 import aiohttp.web
 import asyncio
 import itertools
-import logging
 import uvloop
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 loop = asyncio.get_event_loop()
-logging.basicConfig(level=logging.DEBUG)
 counter = itertools.count()
 
 

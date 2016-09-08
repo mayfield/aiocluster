@@ -20,10 +20,11 @@ class Coordinator(service.AIOService):
     kill_timeout = 1
 
     def __init__(self, worker_spec, worker_count=None,
-                 worker_exit_action=None, handle_sigterm=True,
+                 worker_settings=None, handle_sigterm=True,
                  handle_sigint=True, loop=None, **kwargs):
         self.worker_spec = worker_spec
         self.worker_count = worker_count or cpu_count()
+        self.worker_settings = worker_settings or {}
         self.workers = []
         self.monitors = []
         self.handle_sigterm = handle_sigterm
@@ -61,8 +62,9 @@ class Coordinator(service.AIOService):
 
     async def start_worker(self):
         """ Create a worker process and start monitoring it. """
-        wp = await worker.spawn(self.worker_spec, context=self.context,
-                                loop=self.loop)
+        wp = await worker.spawn(self.worker_spec,
+                                settings=self.worker_settings,
+                                context=self.context, loop=self.loop)
         mt = self.loop.create_task(self.worker_monitor_wrap(wp))
         wp.monitor_task = mt
         self.workers.append(wp)

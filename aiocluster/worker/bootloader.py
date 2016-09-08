@@ -7,6 +7,7 @@ import logging
 import os
 import shellish
 from . import env
+from .. import logsetup
 
 logger = logging.getLogger('worker.bootloader')
 
@@ -27,13 +28,14 @@ class Launcher(shellish.Command):
     def setup_args(self, parser):
         self.add_argument('worker_spec', help=self.worker_spec_help)
         self.add_argument('ident', help=self.ident_help)
-        verbosity = {'traceback', 'pretty', 'debug', 'raise'}
-        self.add_argument('--error-verbosity', choices=verbosity,
-                          default='traceback')
 
     def run(self, args):
-        self.session.command_error_verbosity = args.error_verbosity
         setup = env.decode(os.environ.pop('_AIOCLUSTER_BOOTLOADER'))
+        settings = setup['settings']
+        if 'error_verbosity' in settings:
+            self.session.command_error_verbosity = settings['error_verbosity']
+        if 'logargs' in settings:
+            logsetup.setup_logging(**settings['logargs'])
         module, func = args.worker_spec.split(':', 1)
         module = importlib.import_module(module)
         fn = getattr(module, func)

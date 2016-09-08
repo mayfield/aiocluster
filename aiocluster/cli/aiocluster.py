@@ -6,7 +6,7 @@ import asyncio
 import logging.handlers
 import pkg_resources
 import shellish
-from ..import coordinator
+from .. import coordinator, logsetup
 
 logger = logging.getLogger('aiocluster.cli')
 
@@ -19,21 +19,6 @@ class AIOCluster(shellish.Command):
     processes. """
 
     name = 'aiocluster'
-    default_log_format = ' '.join((
-        '[%(asctime)s]',
-        '[pid:%(process)s]',
-        '[%(name)s]',
-        '[%(levelname)s]',
-        '%(message)s'
-    ))
-    verbose_log_format = ' '.join((
-        '[%(asctime)s]',
-        '[pid:%(process)s:%(threadName)s]',
-        '[%(name)s]',
-        '[%(levelname)s]',
-        '[%(filename)s:%(funcName)s():%(lineno)s]',
-        '%(message)s'
-    ))
 
     def setup_args(self, parser):
         self.add_argument('worker_spec', metavar='MODULE:FUNCTION',
@@ -52,7 +37,7 @@ class AIOCluster(shellish.Command):
         self.add_argument('--log-level', choices=levels, default='info',
                           autoenv=True, help='Choose default logging level.')
         self.add_argument('--log-format', autoenv=True, help='Override the '
-                          'logging format')
+                          'default logging format')
         self.add_argument('--syslog-addr', default='/dev/log', autoenv=True,
                           help='Either a unix socket or `host:port` tuple.')
         self.add_argument('--verbose', '-v', action='store_true', autoenv=True,
@@ -61,29 +46,28 @@ class AIOCluster(shellish.Command):
         self.add_argument('--version', action='version', version=version)
 
     def run(self, args):
+        worker_settings = {}
         if args.log_handler != 'off':
-            if args.log_format is not None:
-                log_format = args.log_format
-            elif args.verbose:
-                log_format = self.verbose_log_format
-            else:
-                log_format = self.default_log_format
             if args.log_handler == 'syslog':
-                addr = args.syslog_addr
+                saddr = args.syslog_addr
                 try:
-                    host, port = addr.split(':', 1)
+                    host, port = saddr.split(':', 1)
                     port = int(port)
                 except ValueError:
                     pass
                 else:
-                    addr = host, port
-                handler = logging.handlers.SysLogHandler(addr)
-                handler.setFormatter(logging.Formatter(log_format))
+                    saddr = host, port
             else:
-                handler = shellish.logging.VTMLHandler(fmt=log_format)
-            root = logging.getLogger()
-            root.addHandler(handler)
-            root.setLevel(args.log_level.upper())
+                saddr = None
+            logargs = {
+                "kind": args.log_handler,
+                "level": args.log_level,
+                "fmt": args.log_format,
+                "verbose": args.verbose,
+                "syslog_addr": saddr
+            }
+            logsetup.setup_logging(**logargs)
+            worker_settings['logargs'] = logargs
         logger.info("Starting Coordinator")
         if args.uvloop in {'auto', 'yes'}:
             try:
@@ -98,7 +82,8 @@ class AIOCluster(shellish.Command):
 
         loop = asyncio.get_event_loop()
         coord = coordinator.Coordinator(args.worker_spec,
-                                        worker_count=args.workers)
+                                        worker_count=args.workers,
+                                        worker_settings=worker_settings)
         loop.run_until_complete(coord.start())
         try:
             loop.run_until_complete(coord.wait_stopped())
