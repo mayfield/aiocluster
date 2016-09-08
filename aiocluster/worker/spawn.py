@@ -56,16 +56,15 @@ class WorkerProcess(object):
             self._cmd += '--error-verbosity', error_verbosity
 
     def __str__(self):
-        return '<%s:%d [%s] pid=%s, age=%s, cpu=%s>' % (type(self).__name__,
+        return '<%s:%d [%s] pid=%s, age=%s>' % (type(self).__name__,
             self.ident, self.spec, self.process and self.process.pid,
-            self.age(), self.util and self.util.cpu_percent(None))
+            self.age())
 
     def _now(self):
         return datetime.datetime.now()
 
     def age(self):
-        elapsed = self._now().timestamp() - self.created.timestamp()
-        return datetime.timedelta(seconds=round(elapsed))
+        return self._now() - self.created
 
     async def start(self):
         self.process = await asyncio.create_subprocess_exec(*self._cmd,

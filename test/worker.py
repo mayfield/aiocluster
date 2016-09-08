@@ -18,17 +18,17 @@ class SpawnTests(base.AIOTestCase):
     async def test_bootloader_loop_arg(self, loop=None):
         wp = await worker.spawn('test.worker:bootloader_test_fn', args=(123,),
                                   loop=loop)
-        self.assertEqual(await wp.wait(), 123)
+        self.assertEqual(await wp.process.wait(), 123)
 
     async def test_bootloader_loop_kwarg(self, loop=None):
         wp = await worker.spawn('test.worker:bootloader_test_fn2',
                                   kwargs={"a": 123}, loop=loop)
-        self.assertEqual(await wp.wait(), 123)
+        self.assertEqual(await wp.process.wait(), 123)
 
     async def test_bad_modules(self, loop=None):
         wp = await worker.spawn('doestnotexist:func', error_verbosity='pretty',
                                   loop=loop)
-        self.assertEqual(await wp.wait(), 1)
+        self.assertEqual(await wp.process.wait(), 1)
 
 
 @unittest.skip('asyncio child watcher issue24837')

@@ -3,9 +3,12 @@ Command line interface for managing a simple aiocluster service.
 """
 
 import asyncio
-import shellish
 import logging.handlers
+import pkg_resources
+import shellish
 from ..import coordinator
+
+logger = logging.getLogger('aiocluster.cli')
 
 
 class AIOCluster(shellish.Command):
@@ -32,40 +35,32 @@ class AIOCluster(shellish.Command):
         '%(message)s'
     ))
 
-
     def setup_args(self, parser):
         self.add_argument('worker_spec', metavar='MODULE:FUNCTION',
-                          help='The module/function specification for worker '
-                          'processes. The module needs to be in Python\'s '
-                          'module search path.')
+                          autoenv=True, help='The module/function '
+                          'specification for worker processes. The module '
+                          'needs to be in Python\'s module search path.')
         self.add_argument('--uvloop', choices=('auto', 'on', 'off'),
-                          help='[auto] Optional use of faster event loop from '
-                          'https://github.com/MagicStack/uvloop')
-        self.add_argument('--workers', help='Number of worker processes to '
-                          'run.')
+                          default='auto', autoenv=True, help='Use of high '
+                          'performance event loop uvloop.')
+        self.add_argument('--workers', autoenv=True, type=int,
+                          help='Number of worker processes to run.')
         self.add_argument('--log-handler', choices=('color', 'off', 'syslog'),
-                          default='color', help='[color] Adjust log handler '
-                          'for coordinator and workers.')
+                          default='color', autoenv=True, help='Set the log '
+                          'handler for the coordinator and its workers.')
         levels = 'debug', 'info', 'warning', 'error', 'critical'
         self.add_argument('--log-level', choices=levels, default='info',
-                          help='[info] Choose default logging level.')
-        self.add_argument('--log-format', help='Override the logging format')
-        self.add_argument('--syslog-addr', default='/dev/log',
-                          help='[/dev/log] Either a unix socket or '
-                          '`host:port` tuple.')
-        self.add_argument('--verbose', '-v', action='store_true',
+                          autoenv=True, help='Choose default logging level.')
+        self.add_argument('--log-format', autoenv=True, help='Override the '
+                          'logging format')
+        self.add_argument('--syslog-addr', default='/dev/log', autoenv=True,
+                          help='Either a unix socket or `host:port` tuple.')
+        self.add_argument('--verbose', '-v', action='store_true', autoenv=True,
                           help='Verbose log output')
+        version = pkg_resources.require("aiocluster")[0].version
+        self.add_argument('--version', action='version', version=version)
 
     def run(self, args):
-        if args.uvloop in {'auto', 'yes'}:
-            try:
-                import uvloop
-            except ImportError:
-                uvloop = None
-            if args.uvloop == 'yes' and uvloop is None:
-                raise SystemExit("uvloop module not found")
-            if uvloop is not None:
-                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         if args.log_handler != 'off':
             if args.log_format is not None:
                 log_format = args.log_format
@@ -89,16 +84,28 @@ class AIOCluster(shellish.Command):
             root = logging.getLogger()
             root.addHandler(handler)
             root.setLevel(args.log_level.upper())
+        logger.info("Starting Coordinator")
+        if args.uvloop in {'auto', 'yes'}:
+            try:
+                import uvloop
+            except ImportError:
+                uvloop = None
+            if args.uvloop == 'yes' and uvloop is None:
+                raise SystemExit("uvloop module not found")
+            if uvloop is not None:
+                logger.info("Using high performance uvloop.")
+                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
         loop = asyncio.get_event_loop()
         coord = coordinator.Coordinator(args.worker_spec,
                                         worker_count=args.workers)
         loop.run_until_complete(coord.start())
         try:
-            loop.run_forever()
+            loop.run_until_complete(coord.wait_stopped())
         except KeyboardInterrupt:
             pass
         finally:
-            loop.run_until_complete((coord.stop()))
+            loop.run_until_complete(coord.stop())
             loop.close()
 
 
