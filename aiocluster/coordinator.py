@@ -148,19 +148,22 @@ class Coordinator(service.AIOService):
         retcode = await wp.process.wait()
         if retcode:
             logger.warning("Non-zero retcode (%d) from: %s" % (retcode, wp))
-        else:
-            logger.warning("Silent death: %s" % wp)
         self.workers.remove(wp)
         self.monitors.remove(wp.monitor_task)
         wp.monitor_task = None
         await self.on_worker_exit(wp)
 
+    async def worker_restart_delay(self, wp):
+        """ Delay a worker restart here to avoid spinning out of control if
+        there is trouble starting workers.  This version throttles more as
+        worker count goes up.  Subclasses may tweak the behavior as they see
+        fit. """
+        delay = math.log(1 + wp.ident) ** 2
+        logger.info("Delaying worker restart %d seconds" % round(delay))
+        await asyncio.sleep(delay, loop=self.loop)
+
     async def on_worker_exit(self, wp):
         if self._stopping:
             return
-        # Add some delay for spuriously restarting workers. 
-        delay = math.log(100 + (1 / max(wp.age().total_seconds(), 1/10000)))
-        logger.warning("Replacing dead worker (after %f seconds delay): %s" %
-                       (delay, wp))
-        await asyncio.sleep(delay, loop=self.loop)
+        await self.worker_restart_delay(wp)
         await self.start_worker()

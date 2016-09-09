@@ -1,5 +1,5 @@
 """
-To run `aiocluster simple_prefork_web:worker`
+To run `aiocluster cli_simple_web:worker`
 """
 
 import aiohttp.web
@@ -9,21 +9,16 @@ import logging
 
 loop = asyncio.get_event_loop()
 counter = itertools.count()
-logger = logging.getLogger('aiocluster.worker')
+logger = logging.getLogger('cli_simple_web')
 
 
 def info(request):
     return aiohttp.web.Response(body=b'%d' % next(counter))
 
 
-async def server():
+async def worker(ident, context):
     app = aiohttp.web.Application()
-    await loop.create_server(app.make_handler(), '0.0.0.0', 8080,
-                             reuse_port=True)
+    server = await loop.create_server(app.make_handler(), '0.0.0.0', 8080,
+                                      reuse_port=True)
     app.router.add_route('GET', '/', info)
-    logger.info("Started worker web server")
-
-
-def worker(ident, context):
-    loop.create_task(server())
-    loop.run_forever()
+    await server.wait_closed()

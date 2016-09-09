@@ -2,13 +2,12 @@
 Command line interface for managing a simple aiocluster service.
 """
 
-import asyncio
 import logging.handlers
 import pkg_resources
 import shellish
-from .. import coordinator, logsetup
+from .. import coordinator, setup
 
-logger = logging.getLogger('aiocluster.cli')
+logger = logging.getLogger('cli.aiocluster')
 
 
 class AIOCluster(shellish.Command):
@@ -28,11 +27,14 @@ class AIOCluster(shellish.Command):
         self.add_argument('--uvloop', choices=('auto', 'on', 'off'),
                           default='auto', autoenv=True, help='Use of high '
                           'performance event loop uvloop.')
+        self.add_argument('--event-loop-debug', action='store_true',
+                          autoenv=True, help='Calls loop.set_debug(True)')
         self.add_argument('--workers', autoenv=True, type=int,
                           help='Number of worker processes to run.')
-        self.add_argument('--log-handler', choices=('color', 'off', 'syslog'),
-                          default='color', autoenv=True, help='Set the log '
-                          'handler for the coordinator and its workers.')
+        self.add_argument('--log-handler', choices=('console', 'off',
+                          'syslog'), default='console', autoenv=True,
+                          help='Set the log handler for the coordinator '
+                          'workers.')
         levels = 'debug', 'info', 'warning', 'error', 'critical'
         self.add_argument('--log-level', choices=levels, default='info',
                           autoenv=True, help='Choose default logging level.')
@@ -48,50 +50,33 @@ class AIOCluster(shellish.Command):
     def run(self, args):
         worker_settings = {}
         if args.log_handler != 'off':
-            if args.log_handler == 'syslog':
-                saddr = args.syslog_addr
-                try:
-                    host, port = saddr.split(':', 1)
-                    port = int(port)
-                except ValueError:
-                    pass
-                else:
-                    saddr = host, port
-            else:
-                saddr = None
-            logargs = {
+            worker_settings['logging'] = {
                 "kind": args.log_handler,
                 "level": args.log_level,
                 "fmt": args.log_format,
                 "verbose": args.verbose,
-                "syslog_addr": saddr
+                "syslog_addr": args.syslog_addr
             }
-            logsetup.setup_logging(**logargs)
-            worker_settings['logargs'] = logargs
+            setup.setup_logging(**worker_settings['logging'])
         logger.info("Starting Coordinator")
-        if args.uvloop in {'auto', 'yes'}:
-            try:
-                import uvloop
-            except ImportError:
-                uvloop = None
-            if args.uvloop == 'yes' and uvloop is None:
-                raise SystemExit("uvloop module not found")
-            if uvloop is not None:
-                logger.info("Using high performance uvloop.")
-                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-        loop = asyncio.get_event_loop()
+        worker_settings['event_loop'] = {
+            "use_uvloop": {"auto": None, "yes": True, "no": False}[args.uvloop]
+        }
+        loop = setup.get_event_loop(**worker_settings['event_loop'])
         coord = coordinator.Coordinator(args.worker_spec,
                                         worker_count=args.workers,
-                                        worker_settings=worker_settings)
+                                        worker_settings=worker_settings,
+                                        loop=loop)
         loop.run_until_complete(coord.start())
         try:
             loop.run_until_complete(coord.wait_stopped())
         except KeyboardInterrupt:
             pass
         finally:
-            loop.run_until_complete(coord.stop())
-            loop.close()
+            try:
+                loop.run_until_complete(coord.stop())
+            finally:
+                loop.close()
 
 
 def entry():
