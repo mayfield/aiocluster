@@ -58,7 +58,7 @@ class Launcher(shellish.Command):
             raise TypeError('worker function must be coroutine')
         try:
             worker_coro = fn(*args, **kwargs)
-        except TypeError as e:
+        except TypeError:
             raise TypeError('Required worker signature: '
                             'function(ident:int, context:dict, ...)')
         logger.debug('Launching: %s' % fn)
