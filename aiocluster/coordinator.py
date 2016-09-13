@@ -3,11 +3,13 @@ Coordinator service manages worker processes and acts as a broker for RPC calls
 made by foreign coordinator nodes.
 """
 
+import aiozmq.rpc
 import asyncio
 import logging
 import math
 import os
 import signal
+import uuid
 from  multiprocessing import cpu_count
 from . import service, worker
 
@@ -31,20 +33,40 @@ class Coordinator(service.AIOService):
         self.handle_sigint = handle_sigint
         self._stopping = False
         self._stopped = asyncio.Event(loop=loop)
+        self.ident = '%x' % uuid.uuid4().node
+        self.rpc_server = None
         super().__init__(loop=loop, **kwargs)
 
     async def start(self):
         assert not self._stopping
+        logger.debug('Coordinator Starting')
         self.add_signal_handlers()
-        logger.info("Coordinator starting %d workers" % self.worker_count)
+        await self.start_rpc()
+        await self.start_workers()
+        logger.info("Coordinator Started")
+
+    async def start_rpc(self):
+        """ Setup a zeromq service for rpc with workers. """
+        addr = 'ipc://aiocluster-%s-rpc' % self.ident
+        self.context['coord_rpc_addr'] = addr
+        s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=addr,
+                                       log_exceptions=True)
+        self.rpc_server = s
+
+    async def stop_rpc(self):
+        self.rpc_server.close()
+        await self.rpc_server.wait_closed()
+        self.rpc_server = None
+
+    async def start_workers(self):
+        logger.info("Starting %d workers" % self.worker_count)
         try:
             for i in range(self.worker_count):
                 await self.start_worker()
         except:
-            logger.critical("Failed to start coordinator!")
+            logger.critical("Failed to start workers!")
             await self.stop()
             raise
-        logger.info("Coordinator Started")
 
     def add_signal_handlers(self):
         if self.handle_sigterm:
@@ -116,6 +138,7 @@ class Coordinator(service.AIOService):
                         x.cancel()
         elif self.workers:
             raise RuntimeError('unexpected workers/monitors mismatch')
+        await self.stop_rpc()
         logger.info("Coordinator Stopped")
         self._stopped.set()
 
@@ -167,3 +190,15 @@ class Coordinator(service.AIOService):
             return
         await self.worker_restart_delay(wp)
         await self.start_worker()
+
+
+class RPCHandler(aiozmq.rpc.AttrHandler):
+
+    def __init__(self, coord):
+        self.coord = coord
+        super().__init__()
+
+    @aiozmq.rpc.method
+    async def register_worker_service(self, worker_ident, desc, rpc_addr):
+        logger.info("Confirmed Worker Service!: %s %s %s" % (worker_ident,
+            desc, rpc_addr))

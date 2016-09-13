@@ -60,7 +60,7 @@ class AIOCluster(shellish.Command):
             setup.setup_logging(**worker_settings['logging'])
         logger.info("Starting Coordinator")
         worker_settings['event_loop'] = {
-            "use_uvloop": {"auto": None, "yes": True, "no": False}[args.uvloop]
+            "use_uvloop": {"auto": None, "on": True, "off": False}[args.uvloop]
         }
         loop = setup.get_event_loop(**worker_settings['event_loop'])
         coord = coordinator.Coordinator(args.worker_spec,

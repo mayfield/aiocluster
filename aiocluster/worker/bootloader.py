@@ -36,9 +36,12 @@ class Launcher(shellish.Command):
         self.start = time.monotonic()
         bootenv = env.decode(os.environ.pop('_AIOCLUSTER_BOOTLOADER'))
         self.setup(**bootenv['settings'])
-        module, func = args.worker_spec.split(':', 1)
+        module, funcpath = args.worker_spec.split(':', 1)
         module = importlib.import_module(module)
-        fn = getattr(module, func)
+        offt = module
+        for x in funcpath.split('.'):
+            offt = getattr(offt, x)
+        fn = offt
         self.run_worker(fn, self.loop, args.ident, bootenv['context'],
                         *bootenv['args'], **bootenv['kwargs'])
 

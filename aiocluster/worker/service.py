@@ -6,8 +6,12 @@ You can use aiocluster's without this code but will not get the IPC mechs
 that allow for remote control and status.
 """
 
+import aiozmq.rpc
 import asyncio
+import logging
 from .. import service
+
+logger = logging.getLogger('worker.service')
 
 
 class WorkerService(service.AIOService):
@@ -17,14 +21,54 @@ class WorkerService(service.AIOService):
     name = 'worker'
 
     @classmethod
-    async def factory(cls, ident, context):
-        instance = cls(context)
+    async def run(cls, *args, **kwargs):
+        instance = cls(*args, **kwargs)
         await instance.start()
-        await asyncio.sleep(5)
-        print("YES!")
-        print("YES!")
-        print("YES!")
-        print("YES!")
+        await instance.wait_stopped()
+        await instance.stop()
+
+    def __init__(self, ident, context):
+        self.ident = ident
+        self.rpc_client = None
+        self.rpc_server = None
+        super().__init__(context)
 
     async def start(self):
-        pass
+        await self.start_rpc()
+
+    async def start_rpc(self):
+        addr = self.context['coord_rpc_addr']
+        server_addr = '%s-%s' % (addr, self.ident)
+        c = await aiozmq.rpc.connect_rpc(connect=addr)
+        s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=server_addr,
+                                       log_exceptions=True)
+        self.rpc_client = c
+        self.rpc_server = s
+        await c.call.register_worker_service(self.ident, str(self),
+                                             server_addr)
+
+    async def stop(self):
+        await self.stop_rpc()
+
+    async def stop_rpc(self):
+        self.rpc_client.close()
+        await self.rpc_client.wait_closed()
+        self.rpc_server.close()
+        await self.rpc_server.wait_closed()
+
+    async def wait_stopped(self):
+        while True:
+            print("Nothing to do")
+            await asyncio.sleep(10, loop=self.loop)
+
+
+class RPCHandler(aiozmq.rpc.AttrHandler):
+
+    def __init__(self, worker):
+        self.worker = worker
+        super().__init__()
+
+    @aiozmq.rpc.method
+    def get_status(self):
+        logger.info('Handling get_status rpc')
+        return 1, 2, 3

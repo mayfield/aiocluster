@@ -11,7 +11,7 @@ class AIOService(object):
     name = None
 
     def __init__(self, context=None, loop=None):
-        self.context = context
+        self.context = context or {}
         if loop is None:
             loop = asyncio.get_event_loop()
         self.loop = loop
@@ -22,4 +22,8 @@ class AIOService(object):
 
     async def stop(self):
         """ Perform any ioloop cleanup here. """
+        raise NotImplementedError("pure virtual")
+
+    async def wait_stopped(self):
+        """ Block until service is stopped. """
         raise NotImplementedError("pure virtual")
