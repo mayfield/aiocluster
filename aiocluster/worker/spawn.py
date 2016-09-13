@@ -7,6 +7,7 @@ import datetime
 import itertools
 import logging
 import os
+import re
 import psutil
 import subprocess
 import sys
@@ -35,10 +36,12 @@ async def spawn(worker_spec, **kwargs):
 class WorkerProcess(object):
 
     identer = itertools.count()
+    spec_regex = re.compile(r'([a-z_][0-9a-z_]*(\.(?=[a-z_]))?)+', re.I)
 
     def __init__(self, spec, pycmd, pyflags, bootloader=default_bootloader,
                  loop=None, settings=None, context=None, args=None,
                  kwargs=None):
+        self.assert_spec_conformance(spec)
         self.process = None
         self.util = None
         self.ident = next(self.identer)
@@ -53,6 +56,17 @@ class WorkerProcess(object):
             "settings": settings or {}
         })
         self._cmd = pycmd, *pyflags, '-m', bootloader, spec, str(self.ident)
+
+    def assert_spec_conformance(self, spec):
+        """ Make sure the spec is properly formatted before spawning a process. """
+        if not isinstance(spec, str):
+            raise TypeError("Spec must be str type")
+        if ':' not in spec:
+            raise ValueError("Spec must use `:` to seperate `module:function`")
+        for spec in spec.split(':', 1):
+            match = self.spec_regex.match(spec)
+            if match is None or match.group() != spec:
+                raise ValueError("Specifier is not valid: `%s`" % spec)
 
     def __str__(self):
         return '<%s:%d [%s] pid=%s, age=%s>' % (type(self).__name__,

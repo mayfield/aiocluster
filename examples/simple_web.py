@@ -20,6 +20,7 @@ async def worker(ident, context):
     server = await loop.create_server(app.make_handler(), '0.0.0.0', 8080,
                                       reuse_port=True)
     app.router.add_route('GET', '/', info)
+    print("Server running: http://localhost:8080")
     await server.wait_closed()
 
 
