@@ -11,7 +11,7 @@ import os
 import signal
 import uuid
 from  multiprocessing import cpu_count
-from . import service, worker
+from . import service, worker, diag
 
 logger = logging.getLogger('coordinator')
 
@@ -21,12 +21,13 @@ class Coordinator(service.AIOService):
     term_timeout = 5
     kill_timeout = 1
 
-    def __init__(self, worker_spec, worker_count=None,
-                 worker_settings=None, handle_sigterm=True,
-                 handle_sigint=True, loop=None, **kwargs):
+    def __init__(self, worker_spec, worker_count=None, worker_settings=None,
+                 diag_settings=None, handle_sigterm=True, handle_sigint=True,
+                 loop=None, **kwargs):
         self.worker_spec = worker_spec
         self.worker_count = worker_count or cpu_count()
         self.worker_settings = worker_settings or {}
+        self.diag_settings = diag_settings
         self.workers = []
         self.monitors = []
         self.handle_sigterm = handle_sigterm
@@ -35,6 +36,7 @@ class Coordinator(service.AIOService):
         self._stopped = asyncio.Event(loop=loop)
         self.ident = '%x' % uuid.uuid4().node
         self.rpc_server = None
+        self.diag = None
         super().__init__(loop=loop, **kwargs)
 
     async def start(self):
@@ -42,6 +44,8 @@ class Coordinator(service.AIOService):
         logger.debug('Coordinator Starting')
         self.add_signal_handlers()
         await self.start_rpc()
+        if self.diag_settings:
+            await self.start_diag(**self.diag_settings)
         await self.start_workers()
         logger.info("Coordinator Started")
 
@@ -57,6 +61,14 @@ class Coordinator(service.AIOService):
         self.rpc_server.close()
         await self.rpc_server.wait_closed()
         self.rpc_server = None
+
+    async def start_diag(self, **settings):
+        self.diag = diag.DiagService(context=self.context, loop=self.loop,
+                                     **settings)
+        await self.diag.start()
+
+    async def stop_diag(self):
+        await self.diag.stop()
 
     async def start_workers(self):
         logger.info("Starting %d workers" % self.worker_count)
@@ -139,6 +151,9 @@ class Coordinator(service.AIOService):
         elif self.workers:
             raise RuntimeError('unexpected workers/monitors mismatch')
         await self.stop_rpc()
+        if self.diag:
+            await self.stop_diag()
+            self.diag = None
         logger.info("Coordinator Stopped")
         self._stopped.set()
 

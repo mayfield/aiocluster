@@ -28,9 +28,9 @@ class AIOCluster(shellish.Command):
                           default='auto', autoenv=True, help='Use of high '
                           'performance event loop uvloop.')
         self.add_argument('--event-loop-debug', action='store_true',
-                          autoenv=True, help='Calls loop.set_debug(True)')
+                          autoenv=True, help='Calls loop.set_debug(True).')
         self.add_argument('--workers', autoenv=True, type=int,
-                          help='Number of worker processes to run.')
+                          help='Number of worker processes to run')
         self.add_argument('--log-handler', choices=('console', 'off',
                           'syslog'), default='console', autoenv=True,
                           help='Set the log handler for the coordinator '
@@ -39,11 +39,17 @@ class AIOCluster(shellish.Command):
         self.add_argument('--log-level', choices=levels, default='info',
                           autoenv=True, help='Choose default logging level.')
         self.add_argument('--log-format', autoenv=True, help='Override the '
-                          'default logging format')
+                          'default logging format.')
         self.add_argument('--syslog-addr', default='/dev/log', autoenv=True,
                           help='Either a unix socket or `host:port` tuple.')
+        self.add_argument('--disable-diag', action='store_true', autoenv=True,
+                          help='Disable the diag service.')
+        self.add_argument('--diag-addr', default='0.0.0.0', autoenv=True,
+                          help='Local address to bind diag server on.')
+        self.add_argument('--diag-port', default=7878, type=int, autoenv=True,
+                          help='Port to bind diag server on.')
         self.add_argument('--verbose', '-v', action='store_true', autoenv=True,
-                          help='Verbose log output')
+                          help='Verbose log output.')
         version = pkg_resources.require("aiocluster")[0].version
         self.add_argument('--version', action='version', version=version)
 
@@ -62,10 +68,18 @@ class AIOCluster(shellish.Command):
         worker_settings['event_loop'] = {
             "use_uvloop": {"auto": None, "on": True, "off": False}[args.uvloop]
         }
+        if not args.disable_diag:
+            diag_settings = {
+                "addr": args.diag_addr,
+                "port": args.diag_port,
+            }
+        else:
+            diag_settings = {}
         loop = setup.get_event_loop(**worker_settings['event_loop'])
         coord = coordinator.Coordinator(args.worker_spec,
                                         worker_count=args.workers,
                                         worker_settings=worker_settings,
+                                        diag_settings=diag_settings,
                                         loop=loop)
         loop.run_until_complete(coord.start())
         try:
