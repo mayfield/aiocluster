@@ -37,15 +37,16 @@ class WorkerService(service.AIOService):
         await self.start_rpc()
 
     async def start_rpc(self):
-        addr = self.context['coord_rpc_addr']
-        server_addr = '%s-%s' % (addr, self.ident)
-        c = await aiozmq.rpc.connect_rpc(connect=addr)
-        s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=server_addr,
+        coord_addr = self.context['coord_rpc_addr']
+        worker_addr = 'ipc://%s/worker-rpc-%s' % (self.context['ipc_dir'],
+                                                  self.ident)
+        c = await aiozmq.rpc.connect_rpc(connect=coord_addr)
+        s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=worker_addr,
                                        log_exceptions=True)
         self.rpc_client = c
         self.rpc_server = s
         await c.call.register_worker_service(self.ident, str(self),
-                                             server_addr)
+                                             worker_addr)
 
     async def stop(self):
         await self.stop_rpc()

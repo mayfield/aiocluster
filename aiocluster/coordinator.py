@@ -9,6 +9,7 @@ import logging
 import math
 import os
 import signal
+import tempfile
 import uuid
 from  multiprocessing import cpu_count
 from . import service, worker, diag
@@ -37,6 +38,7 @@ class Coordinator(service.AIOService):
         self.ident = '%x' % uuid.uuid4().node
         self.rpc_server = None
         self.diag = None
+        self.ipc_dir = None
         super().__init__(loop=loop, **kwargs)
 
     async def start(self):
@@ -51,8 +53,10 @@ class Coordinator(service.AIOService):
 
     async def start_rpc(self):
         """ Setup a zeromq service for rpc with workers. """
-        addr = 'ipc://aiocluster-%s-rpc' % self.ident
+        self.ipc_dir = tempfile.TemporaryDirectory(prefix='aiocluster-')
+        addr = 'ipc://%s/coord-rpc' % self.ipc_dir.name
         self.context['coord_rpc_addr'] = addr
+        self.context['ipc_dir'] = self.ipc_dir.name
         s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=addr,
                                        log_exceptions=True)
         self.rpc_server = s
@@ -61,6 +65,8 @@ class Coordinator(service.AIOService):
         self.rpc_server.close()
         await self.rpc_server.wait_closed()
         self.rpc_server = None
+        self.ipc_dir.cleanup()
+        self.ipc_dir = None
 
     async def start_diag(self, **settings):
         self.diag = diag.DiagService(context=self.context, loop=self.loop,
