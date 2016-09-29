@@ -1,7 +1,6 @@
 import aiohttp
 import aiohttp_debugtoolbar
 import aiohttp_jinja2
-import aiozmq
 import asyncio
 import jinja2
 

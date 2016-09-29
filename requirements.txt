@@ -1,4 +1,4 @@
-aiozmq>=0.7.1
+aionanomsg>=0.1
 msgpack-python
 shellish>=3
 psutil
