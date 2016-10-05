@@ -3,7 +3,7 @@ Coordinator service manages worker processes and acts as a broker for RPC calls
 made by foreign coordinator nodes.
 """
 
-import aiozmq.rpc
+import aionanomsg
 import asyncio
 import logging
 import math
@@ -19,14 +19,15 @@ logger = logging.getLogger('coordinator')
 
 class Coordinator(service.AIOService):
 
-    term_timeout = 5
+    term_timeout = 1
     kill_timeout = 1
 
     def __init__(self, worker_spec, worker_count=None, worker_settings=None,
-                 diag_settings=None, handle_sigterm=True, handle_sigint=True,
-                 loop=None, **kwargs):
+                 worker_restart=True, diag_settings=None, handle_sigterm=True,
+                 handle_sigint=True, loop=None, **kwargs):
         self.worker_spec = worker_spec
         self.worker_count = worker_count or cpu_count()
+        self.worker_restart = worker_restart
         self.worker_settings = worker_settings or {}
         self.diag_settings = diag_settings
         self.workers = []
@@ -52,18 +53,20 @@ class Coordinator(service.AIOService):
         logger.info("Coordinator Started")
 
     async def start_rpc(self):
-        """ Setup a zeromq service for rpc with workers. """
+        """ Setup a service for rpc with workers. """
         self.ipc_dir = tempfile.TemporaryDirectory(prefix='aiocluster-')
         addr = 'ipc://%s/coord-rpc' % self.ipc_dir.name
         self.context['coord_rpc_addr'] = addr
         self.context['ipc_dir'] = self.ipc_dir.name
-        s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=addr,
-                                       log_exceptions=True)
-        self.rpc_server = s
+        self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
+        s.bind(addr)
+        rpcs = CoordRPC()
+        s.add_call(rpcs.register_worker_service)
+        self.loop.create_task(s.start())
 
     async def stop_rpc(self):
-        self.rpc_server.close()
-        await self.rpc_server.wait_closed()
+        self.rpc_server.stop()
+        await self.rpc_server.wait_stopped()
         self.rpc_server = None
         self.ipc_dir.cleanup()
         self.ipc_dir = None
@@ -83,7 +86,8 @@ class Coordinator(service.AIOService):
                 await self.start_worker()
         except:
             logger.critical("Failed to start workers!")
-            await self.stop()
+            self.stop()
+            await self.wait_stopped()
             raise
 
     def add_signal_handlers(self):
@@ -114,14 +118,14 @@ class Coordinator(service.AIOService):
         """ Block until the coordinator and its workers are stopped. """
         await self._stopped.wait()
 
-    async def stop(self):
-        """ Stop the coordinator which in turn kills worker processes.  If the
-        coordinator is already being stopped this call will wait until the
-        prior call completes;  This consolidates stop behavior for graceful
-        shutdown and signal based shutdown. """
+    def stop(self):
+        """ Issue a coordinator stop which terminates worker processes.
+        Use wait_stopped() to wait for completion of this action. """
         if self._stopping:
-            await self._stopped.wait()
             return
+        self.loop.create_task(self._do_stop())
+
+    async def _do_stop(self):
         logger.warning("Coordinator stopping")
         self._stopping = True
         self.remove_signal_handlers()
@@ -174,7 +178,7 @@ class Coordinator(service.AIOService):
             stopped.add_done_callback(lambda _: os.kill(0, sig))
             if not self._stopping:
                 logger.warning("Forcing coordinator stop from signal handler")
-                self.loop.create_task(self.stop())
+                self.stop()
         return handler
 
     async def worker_monitor_wrap(self, wp):
@@ -182,9 +186,9 @@ class Coordinator(service.AIOService):
         try:
             await self.worker_monitor(wp)
         except:
-            logger.exception("Unrecoverable Worker Monitor Error")
+            logger.exception("Unrecoverable worker monitor error")
             if not self._stopping:
-                self.loop.create_task(self.stop())
+                self.stop()
 
     async def worker_monitor(self, wp):
         """ Background task that babysits a worker process and signals us on
@@ -209,17 +213,17 @@ class Coordinator(service.AIOService):
     async def on_worker_exit(self, wp):
         if self._stopping:
             return
-        await self.worker_restart_delay(wp)
-        await self.start_worker()
+        if not self.worker_restart:
+            if not self.workers:
+                logger.warning("All workers have quit")
+                self.stop()
+        else:
+            await self.worker_restart_delay(wp)
+            await self.start_worker()
 
 
-class RPCHandler(aiozmq.rpc.AttrHandler):
+class CoordRPC(object):
 
-    def __init__(self, coord):
-        self.coord = coord
-        super().__init__()
-
-    @aiozmq.rpc.method
     async def register_worker_service(self, worker_ident, desc, rpc_addr):
         logger.info("Confirmed Worker Service!: %s %s %s" % (worker_ident,
             desc, rpc_addr))

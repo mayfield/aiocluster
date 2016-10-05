@@ -6,7 +6,7 @@ You can use aiocluster's without this code but will not get the IPC mechs
 that allow for remote control and status.
 """
 
-import aiozmq.rpc
+import aionanomsg
 import asyncio
 import logging
 from .. import service
@@ -23,9 +23,9 @@ class WorkerService(service.AIOService):
     @classmethod
     async def run(cls, *args, **kwargs):
         instance = cls(*args, **kwargs)
+        await instance.start_rpc()
         await instance.start()
         await instance.wait_stopped()
-        await instance.stop()
 
     def __init__(self, ident, context):
         self.ident = ident
@@ -34,42 +34,26 @@ class WorkerService(service.AIOService):
         super().__init__(context)
 
     async def start(self):
-        await self.start_rpc()
+        raise NotImplementedError()
 
     async def start_rpc(self):
         coord_addr = self.context['coord_rpc_addr']
         worker_addr = 'ipc://%s/worker-rpc-%s' % (self.context['ipc_dir'],
                                                   self.ident)
-        c = await aiozmq.rpc.connect_rpc(connect=coord_addr)
-        s = await aiozmq.rpc.serve_rpc(RPCHandler(self), bind=worker_addr,
-                                       log_exceptions=True)
-        self.rpc_client = c
-        self.rpc_server = s
-        await c.call.register_worker_service(self.ident, str(self),
-                                             worker_addr)
+        self.rpc_client = c = aionanomsg.RPCClient(aionanomsg.NN_REQ)
+        c.connect(coord_addr)
+        self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
+        s.bind(worker_addr)
+        self.loop.create_task(s.start())
+        logger.critical(1)
+        f = await c.call('register_worker_service', self.ident, str(self),
+                         worker_addr)
+        logger.critical(f)
 
-    async def stop(self):
-        await self.stop_rpc()
-
-    async def stop_rpc(self):
-        self.rpc_client.close()
-        await self.rpc_client.wait_closed()
-        self.rpc_server.close()
-        await self.rpc_server.wait_closed()
+    def stop(self):
+        raise NotImplementedError("Stop of worker not supported")
 
     async def wait_stopped(self):
         while True:
             print("Nothing to do")
             await asyncio.sleep(10, loop=self.loop)
-
-
-class RPCHandler(aiozmq.rpc.AttrHandler):
-
-    def __init__(self, worker):
-        self.worker = worker
-        super().__init__()
-
-    @aiozmq.rpc.method
-    def get_status(self):
-        logger.info('Handling get_status rpc')
-        return 1, 2, 3

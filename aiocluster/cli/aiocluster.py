@@ -31,6 +31,9 @@ class AIOCluster(shellish.Command):
                           autoenv=True, help='Calls loop.set_debug(True).')
         self.add_argument('--workers', autoenv=True, type=int,
                           help='Number of worker processes to run')
+        self.add_argument('--disable-worker-restart', action='store_true',
+                          autoenv=True, help='Disable automatic restart of '
+                          'worker processes.')
         self.add_argument('--log-handler', choices=('console', 'off',
                           'syslog'), default='console', autoenv=True,
                           help='Set the log handler for the coordinator '
@@ -61,7 +64,7 @@ class AIOCluster(shellish.Command):
                 "level": args.log_level,
                 "fmt": args.log_format,
                 "verbose": args.verbose,
-                "syslog_addr": args.syslog_addr
+                "syslog_addr": args.syslog_addr,
             }
             setup.setup_logging(**worker_settings['logging'])
         logger.info("Starting Coordinator")
@@ -76,9 +79,11 @@ class AIOCluster(shellish.Command):
         else:
             diag_settings = {}
         loop = setup.get_event_loop(**worker_settings['event_loop'])
+        worker_restart = not args.disable_worker_restart
         coord = coordinator.Coordinator(args.worker_spec,
                                         worker_count=args.workers,
                                         worker_settings=worker_settings,
+                                        worker_restart=worker_restart,
                                         diag_settings=diag_settings,
                                         loop=loop)
         loop.run_until_complete(coord.start())
@@ -86,11 +91,7 @@ class AIOCluster(shellish.Command):
             loop.run_until_complete(coord.wait_stopped())
         except KeyboardInterrupt:
             pass
-        finally:
-            try:
-                loop.run_until_complete(coord.stop())
-            finally:
-                loop.close()
+        loop.close()
 
 
 def entry():

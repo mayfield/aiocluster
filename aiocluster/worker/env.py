@@ -12,4 +12,3 @@ def encode(data):
 
 def decode(value):
     return pickle.loads(base64.b64decode(value))
-

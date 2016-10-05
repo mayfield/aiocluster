@@ -20,10 +20,11 @@ class AIOService(object):
         """ Setup and start any network listeners here. """
         raise NotImplementedError("pure virtual")
 
-    async def stop(self):
-        """ Perform any ioloop cleanup here. """
-        raise NotImplementedError("pure virtual")
+    def stop(self):
+        """ Signal that a stop is to be performed.  This method must be
+        idempotent. """
+        pass
 
     async def wait_stopped(self):
         """ Block until service is stopped. """
-        raise NotImplementedError("pure virtual")
+        pass
