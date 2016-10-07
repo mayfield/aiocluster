@@ -45,10 +45,8 @@ class WorkerService(service.AIOService):
         self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
         s.bind(worker_addr)
         self.loop.create_task(s.start())
-        logger.critical(1)
-        f = await c.call('register_worker_service', self.ident, str(self),
-                         worker_addr)
-        logger.critical(f)
+        await c.call('register_worker_service', self.ident, str(self),
+                     worker_addr)
 
     def stop(self):
         raise NotImplementedError("Stop of worker not supported")
