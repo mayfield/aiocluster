@@ -7,7 +7,6 @@ that allow for remote control and status.
 """
 
 import aionanomsg
-import asyncio
 import logging
 from .. import service
 
@@ -52,6 +51,4 @@ class WorkerService(service.AIOService):
         raise NotImplementedError("Stop of worker not supported")
 
     async def wait_stopped(self):
-        while True:
-            print("Nothing to do")
-            await asyncio.sleep(10, loop=self.loop)
+        raise NotImplementedError('required impl by subclass')
