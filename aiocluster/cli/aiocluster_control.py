@@ -54,7 +54,7 @@ class StopProfiler(shellish.Command):
             "worker": args.worker,
             "action": "stop"
         }).json()
-        t = shellish.Table()
+        t = shellish.Table(headers=['File', 'Func')
 
 
 def entry():

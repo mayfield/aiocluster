@@ -1,4 +1,5 @@
-aionanomsg>=0.1
+aionanomsg>=1.1
 msgpack-python
 shellish>=3
 psutil
+requests
