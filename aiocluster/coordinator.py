@@ -30,7 +30,7 @@ class Coordinator(service.AIOService):
         self.worker_restart = worker_restart
         self.worker_settings = worker_settings or {}
         self.diag_settings = diag_settings
-        self.workers = []
+        self.workers = {}
         self.monitors = []
         self.handle_sigterm = handle_sigterm
         self.handle_sigint = handle_sigint
@@ -60,8 +60,7 @@ class Coordinator(service.AIOService):
         self.context['ipc_dir'] = self.ipc_dir.name
         self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
         s.bind(addr)
-        rpcs = CoordRPC()
-        s.add_call(rpcs.register_worker_service)
+        s.add_call(self.register_worker_rpc)
         self.loop.create_task(s.start())
 
     async def stop_rpc(self):
@@ -73,7 +72,7 @@ class Coordinator(service.AIOService):
 
     async def start_diag(self, **settings):
         self.diag = diag.DiagService(context=self.context, loop=self.loop,
-                                     **settings)
+                                     coordinator=self, **settings)
         await self.diag.start()
 
     async def stop_diag(self):
@@ -111,7 +110,7 @@ class Coordinator(service.AIOService):
                                 context=self.context, loop=self.loop)
         mt = self.loop.create_task(self.worker_monitor_wrap(wp))
         wp.monitor_task = mt
-        self.workers.append(wp)
+        self.workers[wp.ident] = wp
         self.monitors.append(mt)
 
     async def wait_stopped(self):
@@ -129,7 +128,7 @@ class Coordinator(service.AIOService):
         logger.warning("Coordinator stopping")
         self._stopping = True
         self.remove_signal_handlers()
-        for x in self.workers:
+        for x in self.workers.values():
             try:
                 x.process.terminate()
             except ProcessLookupError:
@@ -141,7 +140,7 @@ class Coordinator(service.AIOService):
             if pending:
                 logger.warning("Timeout waiting for %d workers to exit" %
                                len(pending))
-                for x in self.workers:
+                for x in self.workers.values():
                     logger.warning("Killing: %s" % x)
                     try:
                         x.process.kill()
@@ -152,7 +151,7 @@ class Coordinator(service.AIOService):
                 pending = (await asyncio.wait(self.monitors,
                                               timeout=self.kill_timeout))[1]
                 if pending:
-                    undead = [x.process.pid for x in self.workers]
+                    undead = [x.process.pid for x in self.workers.values()]
                     logger.critical("Detected %d zombie workers: %s" % (
                                     len(pending), ', '.join(undead)))
                     for x in pending:
@@ -196,7 +195,7 @@ class Coordinator(service.AIOService):
         retcode = await wp.process.wait()
         if retcode:
             logger.warning("Non-zero retcode (%d) from: %s" % (retcode, wp))
-        self.workers.remove(wp)
+        del self.workers[wp.ident]
         self.monitors.remove(wp.monitor_task)
         wp.monitor_task = None
         await self.on_worker_exit(wp)
@@ -222,8 +221,9 @@ class Coordinator(service.AIOService):
             await self.start_worker()
 
 
-class CoordRPC(object):
-
-    async def register_worker_service(self, worker_ident, desc, rpc_addr):
-        logger.info("Confirmed Worker Service!: %s %s %s" % (worker_ident,
-            desc, rpc_addr))
+    async def register_worker_rpc(self, worker_ident, rpc_addr):
+        logger.debug("Registered worker RPC server: %s %s" % (worker_ident,
+                     rpc_addr))
+        rpc = aionanomsg.RPCClient(aionanomsg.NN_REQ)
+        rpc.connect(rpc_addr)
+        self.workers[worker_ident].rpc = rpc

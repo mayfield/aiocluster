@@ -62,7 +62,7 @@ class WorkerProcess(object):
         if not isinstance(spec, str):
             raise TypeError("Spec must be str type")
         if ':' not in spec:
-            raise ValueError("Spec must use `:` to seperate `module:function`")
+            raise ValueError("Spec must use `:` to seperate `module:runable`")
         for spec in spec.split(':', 1):
             match = self.spec_regex.match(spec)
             if match is None or match.group() != spec:

@@ -28,7 +28,10 @@ setup(
     test_suite='test',
     install_requires=requirements,
     entry_points = {
-        'console_scripts': ['aiocluster=aiocluster.cli.aiocluster:entry'],
+        'console_scripts': [
+            'aiocluster=aiocluster.cli.aiocluster:entry',
+            'aiocluster-control=aiocluster.cli.aiocluster_control:entry'
+        ],
     },
     classifiers=[
         'Development Status :: 3 - Alpha',

@@ -1,0 +1,26 @@
+worker:
+    get_metrics(id)
+    kill(id)
+
+coord:
+    get_metrics()
+    get_sysinfo()
+
+cluster:
+    workers:
+        get_metrics(**filters)
+        kill(**filters)  /* kill(worker_ids=[<coord>-2, <coord>-4]) */
+    coords:
+        get_metrics(**filters)
+    nodes:
+        get_peers()
+    bus:
+        queue:
+            push(name, data...)
+            pull(name)
+        pubsub:
+            sub(name)
+            pub(name, data...)
+        rpc:
+            register(name, interface) /* unique name */
+            call(name).get /* hub.rpc.call('cs').get
