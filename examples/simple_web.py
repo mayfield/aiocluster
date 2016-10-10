@@ -15,7 +15,7 @@ def info(request):
     return aiohttp.web.Response(body=b'%d' % next(counter))
 
 
-async def worker(ident, context):
+async def worker(s):
     app = aiohttp.web.Application()
     server = await loop.create_server(app.make_handler(), '0.0.0.0', 8080,
                                       reuse_port=True)
@@ -32,7 +32,6 @@ def parent():
     except KeyboardInterrupt:
         pass
     finally:
-        loop.run_until_complete(coord.stop())
         loop.close()
 
 if __name__ == '__main__':

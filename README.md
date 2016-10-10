@@ -17,8 +17,9 @@ Features
 * Full asyncio usage.  No synchronous calls are used.
 * Bundled with command line facilities to help ease startup.
 * Diagnostic web server interface
+* Diagnostic CLI tool
 * Basic multi process support (pre-fork)
-* Integrated ZeroMQ for cluster management
+* Integrated aionanomsg support for cluster management and comms
 * Bring your favorite asyncio patterns and libraries!!!
 
 
