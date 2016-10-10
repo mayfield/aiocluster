@@ -80,7 +80,7 @@ class ReportProfiler(ProfilerMixin, shellish.Command):
             {"minwidth": 4},
             {"minwidth": 8},
             {"minwidth": 8},
-            {"minwidth": 5},
+            {"minwidth": 8},
         ], headers=[
             'Function',
             'File',
