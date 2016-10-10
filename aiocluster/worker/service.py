@@ -56,6 +56,7 @@ class WorkerService(object):
         self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
         s.add_call(self.start_profiler)
         s.add_call(self.stop_profiler)
+        s.add_call(self.report_profiler)
         s.bind(worker_addr)
         self.loop.create_task(s.start())
         await c.call('register_worker_rpc', self.ident, worker_addr)
@@ -67,14 +68,37 @@ class WorkerService(object):
         self._profiler = cProfile.Profile()
         self._profiler.enable()
 
+    def call_as_dict(self, call):
+        """ Parse call tuples from Profile.stats into a dict. """
+        return {
+                "file": call[0],
+                "lineno": call[1],
+                "function": call[2]
+        }
+
+    def stats_as_dict(self, stats):
+        """ Parse stats tuples from Profile.stats into a dict. """
+        return {
+            "calls": stats[0],
+            "primitive_calls": stats[1],
+            "total": stats[2],
+            "cumulative": stats[3],
+        }
+
     async def stop_profiler(self):
         if self._profiler is None:
             raise RuntimeError('profiler never started')
         self._profiler.disable()
-        s = io.StringIO()
-        sortby = 'cumulative'
-        ps = pstats.Stats(self._profiler, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        self._pr = None
-        return s.getvalue()
 
+    async def report_profiler(self):
+        #self._profiler.create_stats()
+        self._profiler.snapshot_stats()
+        data = [{
+            "call": self.call_as_dict(call),
+            "stats": self.stats_as_dict(stats),
+            "callers": [{
+                "call": self.call_as_dict(k),
+                "stats": self.stats_as_dict(stats)
+            } for k, v in stats[-1].items()]
+        } for call, stats in self._profiler.stats.items()]
+        return data

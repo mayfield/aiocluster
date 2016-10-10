@@ -83,10 +83,15 @@ class DiagService(service.AIOService):
     async def profiler(self, request):
         args = await request.json()
         worker = self.workers[args['worker']]
+        # XXX use call map
         if args['action'] == 'start':
             return web.json_response(await worker.rpc.call('start_profiler'))
         elif args['action'] == 'stop':
             return web.json_response(await worker.rpc.call('stop_profiler'))
+        elif args['action'] == 'report':
+            return web.json_response(await worker.rpc.call('report_profiler'))
+        else:
+            raise ValueError('Invalid action: %s' % args['action'])
 
     async def tpl_handler(self, request):
         path = request.match_info['path']

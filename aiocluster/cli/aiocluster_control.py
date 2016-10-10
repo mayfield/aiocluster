@@ -2,12 +2,9 @@
 Command line interface for interacting with an aiocluster service.
 """
 
+import os.path
 import requests
 import shellish
-import logging
-from .. import coordinator, setup
-
-logger = logging.getLogger('cli.aiocluster.control')
 
 
 class AIOClusterControl(shellish.Command):
@@ -24,37 +21,82 @@ class AIOClusterControl(shellish.Command):
 class Profiler(shellish.Command):
 
     name = 'profiler'
-    urn = '/api/v1/profiler'
 
     def setup_args(self, parser):
         self.add_subcommand(StartProfiler)
         self.add_subcommand(StopProfiler)
+        self.add_subcommand(ReportProfiler)
 
 
+class ProfilerMixin(object):
 
-class StartProfiler(shellish.Command):
+    urn = '/api/v1/profiler'
+    def setup_args(self, parser):
+        self.add_argument('--worker', type=int, default=0)
+        super().setup_args(parser)
+
+
+class StartProfiler(ProfilerMixin, shellish.Command):
 
     name = 'start'
 
-    def setup_args(self, parser):
-        self.add_argument('--worker', type=int, default=0)
-
     def run(self, args):
-        requests.put(args.url + self.urn, data={
+        requests.put(args.url + self.urn, json={
             "worker": args.worker,
             "action": "start"
         })
 
-class StopProfiler(shellish.Command):
+
+class StopProfiler(ProfilerMixin, shellish.Command):
 
     name = 'stop'
 
     def run(self, args):
-        resp = requests.put(args.url + self.urn, data={
+        requests.put(args.url + self.urn, json={
             "worker": args.worker,
             "action": "stop"
+        })
+
+
+class ReportProfiler(ProfilerMixin, shellish.Command):
+
+    name = 'report'
+    use_pager = True
+
+    def setup_args(self, parser):
+        self.add_argument('--sortby', choices=('cumulative', 'total', 'calls'),
+                          default='cumulative')
+        super().setup_args(parser)
+
+    def run(self, args):
+        stats = requests.put(args.url + self.urn, json={
+            "worker": args.worker,
+            "action": "report"
         }).json()
-        t = shellish.Table(headers=['File', 'Func')
+        stats.sort(key=lambda x: x['stats'][args.sortby], reverse=True)
+        table = shellish.Table(columns=[
+            None,
+            None,
+            {"minwidth": 4},
+            {"minwidth": 8},
+            {"minwidth": 8},
+            {"minwidth": 5},
+        ], headers=[
+            'Function',
+            'File',
+            'Line #',
+            'Cumulative',
+            'Total',
+            'Calls'
+        ])
+        table.print([
+            x['call']['function'],
+            os.path.basename(x['call']['file']),
+            x['call']['lineno'],
+            '%f' % x['stats']['cumulative'],
+            '%f' % x['stats']['total'],
+            x['stats']['calls']
+        ] for x in stats)
 
 
 def entry():
