@@ -8,11 +8,10 @@ be used if you only provide a cororoutine as the worker function.
 
 import aionanomsg
 import asyncio
+import cProfile
 import functools
-import io
 import logging
 import os
-import pstats
 
 logger = logging.getLogger('worker.service')
 
@@ -28,9 +27,10 @@ class WorkerService(object):
         self.rpc_server = None
         self.context = context
         self._profiler = None
+        self._profiler_running = False
         if run is not None:
             self.run = functools.partial(run, self)
-        self.loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop()
 
     def __str__(self):
         return '<%s ident:%d, pid:%d>' % (type(self).__name__, self.ident,
@@ -42,7 +42,7 @@ class WorkerService(object):
         await self.run()
 
     async def setup(self):
-        await self.start_rpc()  # XXX: I don't like this language
+        await self.start_rpc()
 
     async def run(self):
         raise NotImplementedError()
@@ -58,15 +58,17 @@ class WorkerService(object):
         s.add_call(self.stop_profiler)
         s.add_call(self.report_profiler)
         s.bind(worker_addr)
-        self.loop.create_task(s.start())
+        self._loop.create_task(s.start())
         await c.call('register_worker_rpc', self.ident, worker_addr)
 
     async def start_profiler(self):
-        import cProfile
-        if self._profiler is not None:
-            raise RuntimeError('profiler already started')
-        self._profiler = cProfile.Profile()
+        if self._profiler_running:
+            return False
+        if self._profiler is None:
+            self._profiler = cProfile.Profile()
         self._profiler.enable()
+        self._profiler_running = True
+        return True
 
     def call_as_dict(self, call):
         """ Parse call tuples from Profile.stats into a dict. """
@@ -86,14 +88,18 @@ class WorkerService(object):
         }
 
     async def stop_profiler(self):
-        if self._profiler is None:
-            raise RuntimeError('profiler never started')
-        self._profiler.disable()
+        if not self._profiler_running:
+            return False
+        if self._profiler is not None:
+            self._profiler.disable()
+        self._profiler_running = False
+        return True
 
     async def report_profiler(self):
-        #self._profiler.create_stats()
+        if self._profiler is None:
+            raise TypeError('Profiler Not Running')
         self._profiler.snapshot_stats()
-        data = [{
+        return [{
             "call": self.call_as_dict(call),
             "stats": self.stats_as_dict(stats),
             "callers": [{
@@ -101,4 +107,3 @@ class WorkerService(object):
                 "stats": self.stats_as_dict(stats)
             } for k, v in stats[-1].items()]
         } for call, stats in self._profiler.stats.items()]
-        return data

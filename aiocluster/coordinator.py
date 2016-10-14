@@ -12,19 +12,36 @@ import signal
 import tempfile
 import uuid
 from  multiprocessing import cpu_count
-from . import service, worker, diag
+from . import worker, diag
 
 logger = logging.getLogger('coordinator')
+_default_coordinator = None
 
 
-class Coordinator(service.AIOService):
+def get_coordinator():
+    """ Singleton like factory for a Coordinator object. """
+    if _default_coordinator is None:
+        raise RuntimeError('No coordinator initialized')
+    return _default_coordinator
+
+
+class Coordinator(object):
 
     term_timeout = 1
     kill_timeout = 1
+    _instance = None
 
     def __init__(self, worker_spec, worker_count=None, worker_settings=None,
                  worker_restart=True, diag_settings=None, handle_sigterm=True,
-                 handle_sigint=True, loop=None, **kwargs):
+                 handle_sigint=True, loop=None, set_default=True):
+        if set_default:
+            global _default_coordinator
+            if _default_coordinator is not None:
+                raise TypeError('Default coordinator already set')
+            _default_coordinator = self
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        self._loop = loop
         self.worker_spec = worker_spec
         self.worker_count = worker_count or cpu_count()
         self.worker_restart = worker_restart
@@ -40,7 +57,7 @@ class Coordinator(service.AIOService):
         self.rpc_server = None
         self.diag = None
         self.ipc_dir = None
-        super().__init__(loop=loop, **kwargs)
+        self.worker_context = {}
 
     async def start(self):
         assert not self._stopping
@@ -56,12 +73,12 @@ class Coordinator(service.AIOService):
         """ Setup a service for rpc with workers. """
         self.ipc_dir = tempfile.TemporaryDirectory(prefix='aiocluster-')
         addr = 'ipc://%s/coord-rpc' % self.ipc_dir.name
-        self.context['coord_rpc_addr'] = addr
-        self.context['ipc_dir'] = self.ipc_dir.name
+        self.worker_context['coord_rpc_addr'] = addr
+        self.worker_context['ipc_dir'] = self.ipc_dir.name
         self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
         s.bind(addr)
         s.add_call(self.register_worker_rpc)
-        self.loop.create_task(s.start())
+        self._loop.create_task(s.start())
 
     async def stop_rpc(self):
         self.rpc_server.stop()
@@ -71,8 +88,8 @@ class Coordinator(service.AIOService):
         self.ipc_dir = None
 
     async def start_diag(self, **settings):
-        self.diag = diag.DiagService(context=self.context, loop=self.loop,
-                                     coordinator=self, **settings)
+        self.diag = diag.DiagService(coordinator=self, loop=self._loop,
+                                     **settings)
         await self.diag.start()
 
     async def stop_diag(self):
@@ -92,23 +109,23 @@ class Coordinator(service.AIOService):
     def add_signal_handlers(self):
         if self.handle_sigterm:
             handler = self.create_exit_sighandler(signal.SIGTERM)
-            self.loop.add_signal_handler(signal.SIGTERM, handler)
+            self._loop.add_signal_handler(signal.SIGTERM, handler)
         if self.handle_sigint:
             handler = self.create_exit_sighandler(signal.SIGINT)
-            self.loop.add_signal_handler(signal.SIGINT, handler)
+            self._loop.add_signal_handler(signal.SIGINT, handler)
 
     def remove_signal_handlers(self):
         if self.handle_sigterm:
-            self.loop.remove_signal_handler(signal.SIGTERM)
+            self._loop.remove_signal_handler(signal.SIGTERM)
         if self.handle_sigint:
-            self.loop.remove_signal_handler(signal.SIGINT)
+            self._loop.remove_signal_handler(signal.SIGINT)
 
     async def start_worker(self):
         """ Create a worker process and start monitoring it. """
         wp = await worker.spawn(self.worker_spec,
                                 settings=self.worker_settings,
-                                context=self.context, loop=self.loop)
-        mt = self.loop.create_task(self.worker_monitor_wrap(wp))
+                                context=self.worker_context, loop=self._loop)
+        mt = self._loop.create_task(self.worker_monitor_wrap(wp))
         wp.monitor_task = mt
         self.workers[wp.ident] = wp
         self.monitors.append(mt)
@@ -122,7 +139,7 @@ class Coordinator(service.AIOService):
         Use wait_stopped() to wait for completion of this action. """
         if self._stopping:
             return
-        self.loop.create_task(self._do_stop())
+        self._loop.create_task(self._do_stop())
 
     async def _do_stop(self):
         logger.warning("Coordinator stopping")
@@ -172,8 +189,8 @@ class Coordinator(service.AIOService):
 
         def handler():
             logger.warning("Caught %s" % sig)
-            self.loop.remove_signal_handler(sig)
-            stopped = self.loop.create_task(self._stopped.wait())
+            self._loop.remove_signal_handler(sig)
+            stopped = self._loop.create_task(self._stopped.wait())
             stopped.add_done_callback(lambda _: os.kill(0, sig))
             if not self._stopping:
                 logger.warning("Forcing coordinator stop from signal handler")
@@ -207,7 +224,7 @@ class Coordinator(service.AIOService):
         fit. """
         delay = math.log(1 + wp.ident) ** 2
         logger.info("Delaying worker restart %d seconds" % round(delay))
-        await asyncio.sleep(delay, loop=self.loop)
+        await asyncio.sleep(delay, loop=self._loop)
 
     async def on_worker_exit(self, wp):
         if self._stopping:
