@@ -12,6 +12,7 @@ import cProfile
 import functools
 import logging
 import os
+import re
 
 logger = logging.getLogger('worker.service')
 
@@ -70,21 +71,29 @@ class WorkerService(object):
         self._profiler_running = True
         return True
 
-    def call_as_dict(self, call):
+    def call_as_dict(self, code):
         """ Parse call tuples from Profile.stats into a dict. """
+        if isinstance(code, str):
+            file = '~'
+            lineno = 0
+            func = code
+        else:
+            file = code.co_filename
+            lineno = code.co_firstlineno
+            func = code.co_name
         return {
-                "file": call[0],
-                "lineno": call[1],
-                "function": call[2]
+                "file": file,
+                "lineno": lineno,
+                "function": func
         }
 
-    def stats_as_dict(self, stats):
+    def stats_as_dict(self, stat):
         """ Parse stats tuples from Profile.stats into a dict. """
         return {
-            "calls": stats[0],
-            "primitive_calls": stats[1],
-            "total": stats[2],
-            "cumulative": stats[3],
+            "callcount": stat.callcount,
+            "reccallcount": stat.reccallcount,
+            "totaltime": stat.totaltime,
+            "inlinetime": stat.inlinetime,
         }
 
     async def stop_profiler(self):
@@ -98,12 +107,11 @@ class WorkerService(object):
     async def report_profiler(self):
         if self._profiler is None:
             raise TypeError('Profiler Not Running')
-        self._profiler.snapshot_stats()
         return [{
-            "call": self.call_as_dict(call),
-            "stats": self.stats_as_dict(stats),
+            "call": self.call_as_dict(stat.code),
+            "stats": self.stats_as_dict(stat),
             "callers": [{
-                "call": self.call_as_dict(k),
-                "stats": self.stats_as_dict(stats)
-            } for k, v in stats[-1].items()]
-        } for call, stats in self._profiler.stats.items()]
+                "call": self.call_as_dict(substat.code),
+                "stats": self.stats_as_dict(substat)
+            } for substat in (stat.calls or [])]
+        } for stat in self._profiler.getstats()]
