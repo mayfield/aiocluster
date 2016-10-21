@@ -237,10 +237,10 @@ class Coordinator(object):
             await self.worker_restart_delay(wp)
             await self.start_worker()
 
-
     async def register_worker_rpc(self, worker_ident, rpc_addr):
         logger.debug("Registered worker RPC server: %s %s" % (worker_ident,
                      rpc_addr))
         rpc = aionanomsg.RPCClient(aionanomsg.NN_REQ)
         rpc.connect(rpc_addr)
+        # XXX Use cleaner technique for adding rpc handler to worker proxy.
         self.workers[worker_ident].rpc = rpc

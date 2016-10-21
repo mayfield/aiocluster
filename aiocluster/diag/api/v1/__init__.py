@@ -4,12 +4,13 @@ Route URLs to correct resource handler.
 
 import logging
 from aiohttp import web
-from . import profiler
+from . import profiler, memory
 
-logger = logging.getLogger('diag.api.v1')
+logger = logging.getLogger('api.v1')
 
 routes = {
-    'profiler': profiler.ProfilerView
+    'profiler': profiler.ProfilerView,
+    'memory': memory.MemoryView
 }
 
 

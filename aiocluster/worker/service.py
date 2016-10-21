@@ -8,30 +8,27 @@ be used if you only provide a cororoutine as the worker function.
 
 import aionanomsg
 import asyncio
-import cProfile
 import functools
 import logging
 import os
-import re
+from ..diag.worker import profiler, memory
 
 logger = logging.getLogger('worker.service')
 
 
-class WorkerService(object):
-    """ RPC and lifecycle management for the meat and potato's side of an AIO
+class BaseWorkerService(object):
+    """ Lifecycle management for the meat and potato's side of an AIO
     service. """
+
 
     def __init__(self, ident, context, run=None):
         self.ident = ident
         self.pid = os.getpid()
-        self.rpc_client = None
-        self.rpc_server = None
-        self.context = context
-        self._profiler = None
-        self._profiler_running = False
+        self._context = context
         if run is not None:
             self.run = functools.partial(run, self)
         self._loop = asyncio.get_event_loop()
+        self.init()
 
     def __str__(self):
         return '<%s ident:%d, pid:%d>' % (type(self).__name__, self.ident,
@@ -42,76 +39,57 @@ class WorkerService(object):
         await self.setup()
         await self.run()
 
+    def init(self):
+        """ Subclasses and mixins can safely place init here. """
+        pass
+
     async def setup(self):
-        await self.start_rpc()
+        """ Subclasses and mixins can perform async setup here. """
+        pass
 
     async def run(self):
         raise NotImplementedError()
 
-    async def start_rpc(self):
-        coord_addr = self.context['coord_rpc_addr']
-        worker_addr = 'ipc://%s/worker-rpc-%s' % (self.context['ipc_dir'],
+
+class RPCWorkerMixin(object):
+    """ RPC management for the meat and potato's side of an AIO
+    service. """
+
+    def init(self):
+        self._coord_rpc_client = aionanomsg.RPCClient(aionanomsg.NN_REQ)
+        self._worker_rpc_server = aionanomsg.RPCServer(aionanomsg.NN_REP)
+        self._worker_rpc_calls_preinit = []
+        super().init()
+
+    async def setup(self):
+        self._coord_rpc_client.connect(self._context['coord_rpc_addr'])
+        for callback, name in self._worker_rpc_calls_preinit:
+            self._worker_rpc_server.add_call(callback, name=name)
+        self._worker_rpc_calls_preinit = None
+        server_addr = 'ipc://%s/worker-rpc-%s' % (self._context['ipc_dir'],
                                                   self.ident)
-        self.rpc_client = c = aionanomsg.RPCClient(aionanomsg.NN_REQ)
-        c.connect(coord_addr)
-        self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
-        s.add_call(self.start_profiler)
-        s.add_call(self.stop_profiler)
-        s.add_call(self.report_profiler)
-        s.bind(worker_addr)
-        self._loop.create_task(s.start())
-        await c.call('register_worker_rpc', self.ident, worker_addr)
+        self._worker_rpc_server.bind(server_addr)
+        self._loop.create_task(self._worker_rpc_server.start())
+        await self.coord_rpc_call('register_worker_rpc', self.ident,
+                                  server_addr)
+        await super().setup()
 
-    async def start_profiler(self):
-        if self._profiler_running:
-            return False
-        if self._profiler is None:
-            self._profiler = cProfile.Profile()
-        self._profiler.enable()
-        self._profiler_running = True
-        return True
+    async def coord_rpc_call(self, call, *args, **kwargs):
+        return await self._coord_rpc_client.call(call, *args, **kwargs)
 
-    def call_as_dict(self, code):
-        """ Parse call tuples from Profile.stats into a dict. """
-        if isinstance(code, str):
-            file = '~'
-            lineno = 0
-            func = code
+    def add_worker_rpc_callback(self, callback, name=None):
+        """ Extensions can register rpc handlers for this service at init
+        time by calling this on the class prior to startup. """
+        if self._worker_rpc_calls_preinit is not None:
+            self._worker_rpc_calls_preinit.append((callback, name))
         else:
-            file = code.co_filename
-            lineno = code.co_firstlineno
-            func = code.co_name
-        return {
-                "file": file,
-                "lineno": lineno,
-                "function": func
-        }
+            self._worker_rpc_server.add_call(callback, name=name)
 
-    def stats_as_dict(self, stat):
-        """ Parse stats tuples from Profile.stats into a dict. """
-        return {
-            "callcount": stat.callcount,
-            "reccallcount": stat.reccallcount,
-            "totaltime": stat.totaltime,
-            "inlinetime": stat.inlinetime,
-        }
 
-    async def stop_profiler(self):
-        if not self._profiler_running:
-            return False
-        if self._profiler is not None:
-            self._profiler.disable()
-        self._profiler_running = False
-        return True
+class WorkerService(RPCWorkerMixin, BaseWorkerService):
+    """ Add some common functionality to a worker service like diagnostics. """
 
-    async def report_profiler(self):
-        if self._profiler is None:
-            raise TypeError('Profiler Not Running')
-        return [{
-            "call": self.call_as_dict(stat.code),
-            "stats": self.stats_as_dict(stat),
-            "callers": [{
-                "call": self.call_as_dict(substat.code),
-                "stats": self.stats_as_dict(substat)
-            } for substat in (stat.calls or [])]
-        } for stat in self._profiler.getstats()]
+    def init(self):
+        super().init()
+        profiler.ProfilerRPCHandler(self)
+        memory.MemoryRPCHandler(self)

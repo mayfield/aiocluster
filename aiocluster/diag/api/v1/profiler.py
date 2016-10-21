@@ -7,7 +7,7 @@ import logging
 from aiohttp import web
 from .... import coordinator
 
-logger = logging.getLogger('diag.v1.profiler')
+logger = logging.getLogger('api.v1.profiler')
 
 
 class ProfilerView(web.View):
@@ -32,7 +32,7 @@ class ProfilerView(web.View):
         return await self.report()
 
     async def report(self):
-        batch = [x.rpc.call('report_profiler')
+        batch = [x.rpc.call('profiler_report')
                  for x in self.coord.workers.values()]
         return await asyncio.gather(*batch)
 
@@ -54,6 +54,6 @@ class ProfilerView(web.View):
                     workers = [self.coord.workers[worker]]
                 except KeyError:
                     raise  web.HTTPBadRequest(text='Missing/Invalid `worker`')
-        call = '%s_profiler' % action
+        call = 'profiler_%s' % action
         batch = [x.rpc.call(call) for x in workers]
         return await asyncio.gather(*batch)
