@@ -29,7 +29,6 @@ class Coordinator(object):
 
     term_timeout = 1
     kill_timeout = 1
-    _instance = None
 
     def __init__(self, worker_spec, worker_count=None, worker_settings=None,
                  worker_restart=True, diag_settings=None, handle_sigterm=True,
@@ -168,11 +167,11 @@ class Coordinator(object):
                 pending = (await asyncio.wait(self.monitors,
                                               timeout=self.kill_timeout))[1]
                 if pending:
-                    undead = [x.process.pid for x in self.workers.values()]
+                    undead = ', '.join(str(x.process.pid)
+                                       for x in self.workers.values())
                     logger.critical("Detected %d zombie workers: %s" % (
-                                    len(pending), ', '.join(undead)))
+                                    len(pending), undead))
                     for x in pending:
-                        logger.warning("Cancelling: %s" % x)
                         x.cancel()
         elif self.workers:
             raise RuntimeError('unexpected workers/monitors mismatch')
@@ -185,7 +184,7 @@ class Coordinator(object):
 
     def create_exit_sighandler(self, sig):
         """ Return a signal handler that will force a stop and then resend the
-        the signal once we are stopped. """
+        signal once we are stopped. """
 
         def handler():
             logger.warning("Caught %s" % sig)
@@ -201,8 +200,11 @@ class Coordinator(object):
         """ Ensure errors from the monitor do not go unnoticed. """
         try:
             await self.worker_monitor(wp)
+        except asyncio.CancelledError:
+            logger.warning("Worker cancelled: %s" % wp)
         except:
             logger.exception("Unrecoverable worker monitor error")
+        finally:
             if not self._stopping:
                 self.stop()
 
