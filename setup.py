@@ -30,7 +30,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'aiocluster=aiocluster.cli.aiocluster:entry',
-            'aiocluster-control=aiocluster.cli.aiocluster_control:entry'
+            'aiocluster-control=aiocluster.cli.control.main:entry'
         ],
     },
     classifiers=[

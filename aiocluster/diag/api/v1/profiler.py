@@ -53,7 +53,7 @@ class ProfilerView(web.View):
                 try:
                     workers = [self.coord.workers[worker]]
                 except KeyError:
-                    raise  web.HTTPBadRequest(text='Missing/Invalid `worker`')
+                    raise web.HTTPBadRequest(text='Missing/Invalid `worker`')
         call = 'profiler_%s' % action
         batch = [x.rpc.call(call) for x in workers]
         return await asyncio.gather(*batch)

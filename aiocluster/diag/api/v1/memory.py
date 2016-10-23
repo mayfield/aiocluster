@@ -18,6 +18,13 @@ class MemoryView(web.View):
         super().__init__(request)
 
     async def get(self):
-        batch = [x.rpc.call('memory_report')
-                 for x in self.coord.workers.values()]
+        req_type = self.request.GET.get('type', 'mostcommon')
+        if req_type == 'mostcommon':
+            batch = [x.rpc.call('memory_report')
+                     for x in self.coord.workers.values()]
+        elif req_type == 'growth':
+            batch = [x.rpc.call('memory_growth')
+                     for x in self.coord.workers.values()]
+        else:
+            raise web.HTTPBadRequest(text='Invalid type: %s' % req_type)
         return await asyncio.gather(*batch)

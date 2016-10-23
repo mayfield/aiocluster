@@ -8,26 +8,15 @@ import shutil
 import time
 
 
-class AIOClusterControl(shellish.Command):
-    """ Control operations for an AIO Cluster service. """
-
-    name = 'aiocluster-control'
-
-    def setup_args(self, parser):
-        self.add_argument('--url', default='http://127.0.0.1:7878',
-                          autoenv=True, help='URL to connect to.')
-        self.add_subcommand(Profiler)
-
-
 class Profiler(shellish.Command):
 
     name = 'profiler'
 
     def setup_args(self, parser):
-        self.add_subcommand(StartProfiler)
-        self.add_subcommand(StopProfiler)
-        self.add_subcommand(ReportProfiler)
-        self.add_subcommand(TopProfiler)
+        self.add_subcommand(Start)
+        self.add_subcommand(Stop)
+        self.add_subcommand(Report)
+        self.add_subcommand(Top)
 
 
 class ProfilerMixin(object):
@@ -35,7 +24,7 @@ class ProfilerMixin(object):
     urn = '/api/v1/profiler/'
 
 
-class StartProfiler(ProfilerMixin, shellish.Command):
+class Start(ProfilerMixin, shellish.Command):
 
     name = 'start'
 
@@ -43,7 +32,7 @@ class StartProfiler(ProfilerMixin, shellish.Command):
         print(requests.put(args.url + self.urn + 'start'))
 
 
-class StopProfiler(ProfilerMixin, shellish.Command):
+class Stop(ProfilerMixin, shellish.Command):
 
     name = 'stop'
 
@@ -51,7 +40,7 @@ class StopProfiler(ProfilerMixin, shellish.Command):
         requests.put(args.url + self.urn + 'stop')
 
 
-class ReportProfiler(ProfilerMixin, shellish.Command):
+class Report(ProfilerMixin, shellish.Command):
 
     name = 'report'
     use_pager = True
@@ -99,10 +88,9 @@ class ReportProfiler(ProfilerMixin, shellish.Command):
             '%f' % x[1]['inlinetime'],
             x[1]['callcount']
         ] for x in stats)
-        time.sleep(1)
 
 
-class TopProfiler(ProfilerMixin, shellish.Command):
+class Top(ProfilerMixin, shellish.Command):
 
     name = 'top'
     use_pager = False
