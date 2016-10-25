@@ -5,7 +5,6 @@ Diagnostic service (with web ui) that runs in the coordinator.
 import logging
 import os
 import platform
-import psutil
 from . import api
 from aiohttp import web
 
@@ -46,25 +45,14 @@ class DiagService(object):
         return web.HTTPFound('/ui/index.html')
 
     async def health(self, request):
-        coord_proc = psutil.Process()
+        # XXX/TODO Create thresholds for mem usage and possibly cpu usage to
+        # use in determining health pass/fail.
+        # TODO: Add registry for user code to register health tests.
+        # Eg. diag_service.add_health_test(my_callback)
+        # Where my callback can trigger an unhealthy response with either a
+        # falsy value or an exception.
         return web.json_response({
             "platform_info": self.platform_info,
-            "coordinator": {
-                "pid": coord_proc.pid,
-                "cpu_times": coord_proc.cpu_times()._asdict(),
-                "memory": coord_proc.memory_info()._asdict()
-            },
-            "workers": [{
-                "ident": x.ident,
-                "age": x.age().total_seconds(),
-                "pid": x.util.pid,
-                "threads": x.util.num_threads(),
-                "connections": len(x.util.connections()),
-                "cpu_percent": x.util.cpu_percent(),
-                "cpu_times": x.util.cpu_times()._asdict(),
-                "memory": x.util.memory_info()._asdict(),
-                "status": x.util.status(),
-            } for x in self._coordinator.workers.values()]
         })
 
     async def stop(self):
