@@ -34,8 +34,8 @@ class DiagService(object):
         self._app = web.Application(loop=self._loop)
         self._app.router.add_route('GET', '/', self.index_redir)
         self._app.router.add_route('GET', '/health', self.health)
-        self._app.router.add_route('GET', '/api', api.directory)
-        self._app.router.add_route('*', '/api/{path:.*}', api.router)
+        self._app.router.add_route('GET', '/api', api.router.directory)
+        self._app.router.add_route('*', '/api/{path:.*}', api.router.root)
         self._app.router.add_static('/ui', self.ui_dir)
         self._handler = self._app.make_handler()
         listen = self.addr, self.port
