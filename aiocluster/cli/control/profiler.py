@@ -168,7 +168,7 @@ class Top(ProfilerMixin, shellish.Command):
                         totals[key] = x['stats']
                     else:
                         ref['totaltime'] += x['stats']['totaltime']
-                        ref['inlinetime'] += x['stats']['inlinetotal']
+                        ref['inlinetime'] += x['stats']['inlinetime']
                         ref['callcount'] += x['stats']['callcount']
             if prev_ts is None:
                 prev_ts = ts
