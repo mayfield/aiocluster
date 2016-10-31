@@ -25,6 +25,6 @@ class AIOTestCase(unittest.TestCase):
         try:
             return loop.run_until_complete(self._test_coro(loop=loop))
         finally:
-            loop.close()
             if self.set_default_event_loop:
                 asyncio.set_event_loop(None)
+            loop.close()

@@ -44,7 +44,11 @@ class Coordinator(object):
         self.worker_spec = worker_spec
         self.worker_count = worker_count or cpu_count()
         self.worker_restart = worker_restart
-        self.worker_settings = worker_settings or {}
+        self.worker_settings = {
+            "mixins": ['rpc', 'cli']
+        }
+        if worker_settings is not None:
+            self.worker_settings.update(worker_settings)
         self.diag_settings = diag_settings
         self.workers = {}
         self.monitors = []
@@ -202,11 +206,9 @@ class Coordinator(object):
             await self.worker_monitor(wp)
         except asyncio.CancelledError:
             logger.warning("Worker cancelled: %s" % wp)
-        except:
+        except Exception:
             logger.exception("Unrecoverable worker monitor error")
-        finally:
-            if not self._stopping:
-                self.stop()
+            self.stop()
 
     async def worker_monitor(self, wp):
         """ Background task that babysits a worker process and signals us on
@@ -217,7 +219,7 @@ class Coordinator(object):
         del self.workers[wp.ident]
         self.monitors.remove(wp.monitor_task)
         wp.monitor_task = None
-        await self.on_worker_exit(wp)
+        await self.maybe_restart_worker(wp)
 
     async def worker_restart_delay(self, wp):
         """ Delay a worker restart here to avoid spinning out of control if
@@ -228,7 +230,7 @@ class Coordinator(object):
         logger.info("Delaying worker restart %d seconds" % round(delay))
         await asyncio.sleep(delay, loop=self._loop)
 
-    async def on_worker_exit(self, wp):
+    async def maybe_restart_worker(self, wp):
         if self._stopping:
             return
         if not self.worker_restart:

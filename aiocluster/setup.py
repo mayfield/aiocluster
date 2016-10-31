@@ -3,6 +3,7 @@ Handle setup for both coordinator and workers.
 """
 
 import asyncio
+import importlib
 import logging.handlers
 import shellish
 
@@ -60,21 +61,60 @@ def setup_logging(kind='console', level=None, verbose=False, fmt=None,
     root.addHandler(handler)
 
 
-def get_event_loop(use_uvloop=None, debug=None):
-    """ Possibly set the event loop policy to use uvloop and always return the
-    event loop that should be used by all further asyncio activity. """
-    if use_uvloop in {None, True}:
+def get_event_loop(policy='auto', debug=None):
+    """ Possibly set the event loop policy to use a designer event loop.
+    Return a default event loop (using the new policy) and possibly enable
+    debug. """
+    if policy in {'auto', 'uvloop'}:
         try:
             import uvloop
         except ImportError:
             uvloop = None
-        if use_uvloop and uvloop is None:
-            raise SystemExit("uvloop module not found")
+        if uvloop is None and policy == 'uvloop':
+            raise SystemExit("uvloop module not available")
         if uvloop is not None:
             logger.debug("Using uvloop")
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        loop = asyncio.get_event_loop()
-        if debug is not None:
-            loop.set_debug(debug)
-    return asyncio.get_event_loop()
+    loop = asyncio.get_event_loop()
+    if debug is not None:
+        loop.set_debug(debug)
+    return loop
 
+
+def find_worker(spec):
+    """ Return a worker coroutine/service by its spec.  A spec is simply dot
+    seperated symbols.  It should begin with the module path to the remaining
+    object/function path within the final module's namespace.
+
+        MODULE.[MODULE ...].[[OBJECT].]CALLABLE
+
+        Eg.  some.relative.module.MyType.awaitable_function
+             mymodule.myfunction
+    """
+    parts = spec.split('.')
+    if len(parts) == 1 or '' in parts:
+        raise ValueError("Invalid Spec")
+    final_import_exc = None
+    func_parts = None
+    module = None
+    for i in range(len(parts), 0, -1):
+        modulepath = '.'.join(parts[:i])
+        func_parts = parts[i:]
+        try:
+            module = importlib.import_module(modulepath)
+        except ImportError as e:
+            final_import_exc = e
+        else:
+            if not func_parts:
+                raise TypeError('Spec refers to a module')
+            break
+    else:
+        if final_import_exc:
+            raise final_import_exc
+    if module is None:
+        raise RuntimeError(spec, func_parts)
+    assert func_parts
+    offt = module
+    for x in func_parts:
+        offt = getattr(offt, x)
+    return offt

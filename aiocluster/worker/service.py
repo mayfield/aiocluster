@@ -11,23 +11,28 @@ import asyncio
 import functools
 import logging
 import os
+import shellish
 from ..diag.worker import profiler, memory
 
 logger = logging.getLogger('worker.service')
+mixins = {}
 
 
-class BaseWorkerService(object):
+class WorkerService(object):
     """ Lifecycle management for the meat and potato's side of an AIO
     service. """
 
 
-    def __init__(self, ident, context, run=None):
+    def __init__(self, ident, context, loop=None, run=None, run_args=None,
+                 run_kwargs=None):
         self.ident = ident
         self.pid = os.getpid()
         self._context = context
         if run is not None:
             self.run = functools.partial(run, self)
-        self._loop = asyncio.get_event_loop()
+        self._run_args = run_args or ()
+        self._run_kwargs = run_kwargs or {}
+        self._loop = loop or asyncio.get_event_loop()
         self.init()
 
     def __str__(self):
@@ -37,7 +42,7 @@ class BaseWorkerService(object):
     async def __call__(self):
         """ Entrypoint for worker.bootloader.Launcher. """
         await self.setup()
-        await self.run()
+        await self.run(*self._run_args, **self._run_kwargs)
 
     def init(self):
         """ Subclasses and mixins can safely place init here. """
@@ -60,6 +65,8 @@ class RPCWorkerMixin(object):
         self._worker_rpc_server = aionanomsg.RPCServer(aionanomsg.NN_REP)
         self._worker_rpc_calls_preinit = []
         super().init()
+        profiler.ProfilerRPCHandler(self)
+        memory.MemoryRPCHandler(self)
 
     async def setup(self):
         self._coord_rpc_client.connect(self._context['coord_rpc_addr'])
@@ -85,11 +92,15 @@ class RPCWorkerMixin(object):
         else:
             self._worker_rpc_server.add_call(callback, name=name)
 
+mixins['rpc'] = RPCWorkerMixin
 
-class WorkerService(RPCWorkerMixin, BaseWorkerService):
-    """ Add some common functionality to a worker service like diagnostics. """
+
+class CLIWorkerMixin(object):
+    """ Bring in shellish.Command capability so workers can extend the CLI
+    arguments used in the `aiocluster` tool. """
 
     def init(self):
+        self._cli_command = shellish.Command(name='worker')
         super().init()
-        profiler.ProfilerRPCHandler(self)
-        memory.MemoryRPCHandler(self)
+
+mixins['cli'] = CLIWorkerMixin

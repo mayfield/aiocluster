@@ -4,7 +4,6 @@ This module should only ever be used by the spawn() routine.
 
 import asyncio
 import datetime
-import importlib
 import logging
 import os
 import shellish
@@ -32,20 +31,8 @@ class Launcher(shellish.Command):
         self.add_argument('worker_spec', help=self.worker_spec_help)
         self.add_argument('ident', type=int, help=self.ident_help)
 
-    def run(self, args):
-        self.start = time.monotonic()
-        bootenv = env.decode(os.environ.pop('_AIOCLUSTER_BOOTLOADER'))
-        self.setup(**bootenv['settings'])
-        module, funcpath = args.worker_spec.split(':', 1)
-        module = importlib.import_module(module)
-        offt = module
-        for x in funcpath.split('.'):
-            offt = getattr(offt, x)
-        fn = offt
-        self.run_worker(fn, self.loop, args.ident, bootenv['context'],
-                        *bootenv['args'], **bootenv['kwargs'])
-
-    def setup(self, error_verbosity=None, logging=None, event_loop=None):
+    def setup(self, error_verbosity=None, logging=None, event_loop=None,
+              mixins=None):
         """ Perform early setup. """
         if error_verbosity is not None:
             self.session.command_error_verbosity = error_verbosity
@@ -53,24 +40,56 @@ class Launcher(shellish.Command):
             setup.setup_logging(**logging)
         if event_loop is None:
             event_loop = {}
-        self.loop = setup.get_event_loop(**event_loop)
+        self._worker_mixins = []
+        if mixins:
+            for x in mixins:
+                logger.debug("Adding WorkerService mixin: %s" % x)
+                self._worker_mixins.append(service.mixins[x])
+        self._loop = setup.get_event_loop(**event_loop)
 
-    def run_worker(self, worker_fn, loop, *args, **kwargs):
-        """ Run and wait (forever) on worker coro or WorkerService class. """
-        if asyncio.iscoroutinefunction(worker_fn):
-            worker = service.WorkerService(*args, run=worker_fn, **kwargs)
-        elif issubclass(worker_fn, service.WorkerService):
-            worker = worker_fn(*args, **kwargs)
-        else:
-            raise TypeError('worker function must be a coroutine or '
-                            'WorkerService subclass')
+    def run(self, args):
+        """ Extract configuration from the shell ENV.  Then run a
+        WorkerService forever. """
+        start = time.monotonic()
+        bootenv = env.decode(os.environ.pop('_AIOCLUSTER_BOOTLOADER'))
+        self.setup(**bootenv['settings'])
+        thing = setup.find_worker(args.worker_spec)
+        ws = self.make_worker_service(thing, args.ident, bootenv['context'],
+                                      loop=self._loop,
+                                      run_args=bootenv['args'],
+                                      run_kwargs=bootenv['kwargs'])
         try:
-            loop.run_until_complete(worker())
+            self._loop.run_until_complete(ws())
         finally:
-            uptime = round(time.monotonic() - self.start)
+            uptime = round(time.monotonic() - start)
             logger.warning('Worker exited after %s' %
                            datetime.timedelta(seconds=uptime))
-            loop.close()
+            self._loop.close()
+
+    def make_worker_service(self, worker_thing, *ws_args, **ws_kwargs):
+        """ Inspect a worker "thing" and return a WorkerService instance
+        appropriate for the type of worker_thing. """
+        if isinstance(worker_thing, type) and \
+           issubclass(worker_thing, service.WorkerService):
+            logger.debug("Detected WorkerService worker: %s" % worker_thing)
+            worker_base_class = worker_thing
+            run = None
+        elif callable(worker_thing):
+            worker_base_class = service.WorkerService
+            if asyncio.iscoroutinefunction(worker_thing):
+                logger.debug("Detected coroutine worker: %s" % worker_thing)
+                run = worker_thing
+            else:
+                logger.debug("Detected function worker: %s" % worker_thing)
+                async def c(*args, **kwargs):
+                    return worker_thing(*args, **kwargs)
+                run = c
+        else:
+            raise TypeError('Worker must be a coroutine, function or '
+                            'subclass of WorkerService.')
+        worker_bases = tuple(self._worker_mixins) + (worker_base_class,)
+        worker_class = type('FinalizedWorkerService', worker_bases, {})
+        return worker_class(*ws_args, run=run, **ws_kwargs)
 
 
 if __name__ == '__main__':

@@ -41,13 +41,12 @@ class WorkerProcess(object):
     def __init__(self, spec, pycmd, pyflags, bootloader=default_bootloader,
                  loop=None, settings=None, context=None, args=None,
                  kwargs=None):
-        self.assert_spec_conformance(spec)
         self.process = None
         self.util = None
         self.ident = next(self.identer)
         self.created = self._now()
         self.spec = spec
-        self.loop = loop
+        self._loop = loop
         self._env = os.environ.copy()
         self._env["_AIOCLUSTER_BOOTLOADER"] = env.encode({
             "args": args or (),
@@ -56,17 +55,6 @@ class WorkerProcess(object):
             "settings": settings or {}
         })
         self._cmd = pycmd, *pyflags, '-m', bootloader, spec, str(self.ident)
-
-    def assert_spec_conformance(self, spec):
-        """ Make sure the spec is properly formatted before spawning a process. """
-        if not isinstance(spec, str):
-            raise TypeError("Spec must be str type")
-        if ':' not in spec:
-            raise ValueError("Spec must use `:` to seperate `module:runable`")
-        for spec in spec.split(':', 1):
-            match = self.spec_regex.match(spec)
-            if match is None or match.group() != spec:
-                raise ValueError("Specifier is not valid: `%s`" % spec)
 
     def __str__(self):
         return '<%s:%d [%s] pid=%s, age=%s>' % (type(self).__name__,
@@ -81,6 +69,6 @@ class WorkerProcess(object):
 
     async def start(self):
         self.process = await asyncio.create_subprocess_exec(*self._cmd,
-            env=self._env, loop=self.loop)
+            env=self._env, loop=self._loop)
         self.util = psutil.Process(self.process.pid)
         self.util.cpu_percent(None)  # prime cpu usage stat

@@ -2,12 +2,20 @@
 Command line interface for managing a simple aiocluster service.
 """
 
+import argparse
 import logging.handlers
 import pkg_resources
 import shellish
 from .. import coordinator, setup
 
 logger = logging.getLogger('cli.aiocluster')
+
+worker_arg_config = {
+    "dest": 'worker_spec',
+    "metavar": 'MODULE:FUNCTION',
+    "help": 'The module/function specification for worker processes. The '
+            'module needs to be in the Python module search path.'
+}
 
 
 class AIOCluster(shellish.Command):
@@ -18,43 +26,61 @@ class AIOCluster(shellish.Command):
     processes. """
 
     name = 'aiocluster'
+    options_desc = 'The options affect the overall cluster operation.'
+
+    def __init__(self, worker):
+        self._worker = worker
+        super().__init__()
 
     def setup_args(self, parser):
-        self.add_argument('worker_spec', metavar='MODULE:FUNCTION',
-                          autoenv=True, help='The module/function '
-                          'specification for worker processes. The module '
-                          'needs to be in Python\'s module search path.')
-        self.add_argument('--uvloop', choices=('auto', 'on', 'off'),
-                          default='auto', autoenv=True, help='Use of high '
-                          'performance event loop uvloop.')
-        self.add_argument('--event-loop-debug', action='store_true',
-                          autoenv=True, help='Calls loop.set_debug(True).')
-        self.add_argument('--workers', autoenv=True, type=int,
-                          help='Number of worker processes to run')
-        self.add_argument('--disable-worker-restart', action='store_true',
-                          autoenv=True, help='Disable automatic restart of '
-                          'worker processes.')
-        self.add_argument('--log-handler', choices=('console', 'off',
-                          'syslog'), default='console', autoenv=True,
-                          help='Set the log handler for the coordinator '
-                          'workers.')
+        self.add_argument(**worker_arg_config)
+        self._std_arg_parser = parser.add_argument_group(
+            title='coordinator options', description=self.options_desc)
+        self._adv_arg_parser = parser.add_argument_group(
+            title='advanced coordinator options')
+
+        self._arg('--workers', type=int, help='Number of worker processes '
+                  'to run')
+        self._arg('--log-handler', choices=('console', 'off', 'syslog'),
+                  default='console', help='Set the log handler for the '
+                  'coordinator workers.')
         levels = 'debug', 'info', 'warning', 'error', 'critical'
-        self.add_argument('--log-level', choices=levels, default='info',
-                          autoenv=True, help='Choose default logging level.')
-        self.add_argument('--log-format', autoenv=True, help='Override the '
-                          'default logging format.')
-        self.add_argument('--syslog-addr', default='/dev/log', autoenv=True,
-                          help='Either a unix socket or `host:port` tuple.')
-        self.add_argument('--disable-diag', action='store_true', autoenv=True,
-                          help='Disable the diag service.')
-        self.add_argument('--diag-addr', default='0.0.0.0', autoenv=True,
-                          help='Local address to bind diag server on.')
-        self.add_argument('--diag-port', default=7878, type=int, autoenv=True,
-                          help='Port to bind diag server on.')
-        self.add_argument('--verbose', '-v', action='store_true', autoenv=True,
-                          help='Verbose log output.')
+        self._arg('--log-level', choices=levels, default='info',
+                  help='Log level for cooordinator and workers.')
+        self._arg('--verbose', '-v', action='store_true', autoenv=True,
+                  help='Verbose log output.')
         version = pkg_resources.require("aiocluster")[0].version
-        self.add_argument('--version', action='version', version=version)
+        self._arg('--version', action='version', version=version)
+
+        self._advarg('--event-loop', choices=('auto', 'uvloop', 'default'),
+                     default='auto', autoenv=True, help='Select the event '
+                     'loop policy to use.  The `auto` mode will try to use '
+                     'uvloop if available.')
+        self._advarg('--event-loop-debug', action='store_true', autoenv=True,
+                     help='Enable event loop debug mode.')
+        self._advarg('--disable-worker-restart', action='store_true',
+                     autoenv=True, help='Disable automatic restart of worker '
+                     'processes if they exit or fail.')
+        self._advarg('--log-format', autoenv=True, help='Override the default '
+                     'logging format.')
+        self._advarg('--syslog-addr', default='/dev/log', autoenv=True,
+                     help='Either a unix socket filename or `host:port`.')
+        self._advarg('--disable-diag', action='store_true', autoenv=True,
+                     help='Disable the diagnostic service.')
+        self._advarg('--diag-addr', default='0.0.0.0', autoenv=True,
+                     help='Local address to bind diagnostic server on.')
+        self._advarg('--diag-port', default=7878, type=int, autoenv=True,
+                     help='Port to bind diag server on.')
+        #self.add_subcommand(self._worker)
+
+    def _arg(self, *args, parser=None, autoenv=True, **kwargs):
+        if parser is None:
+            parser = self._std_arg_parser
+        return self.add_argument(*args, parser=parser, autoenv=autoenv,
+                                 **kwargs)
+
+    def _advarg(self, *args, **kwargs):
+        return self._arg(*args, parser=self._adv_arg_parser, **kwargs)
 
     def run(self, args):
         worker_settings = {}
@@ -69,7 +95,8 @@ class AIOCluster(shellish.Command):
             setup.setup_logging(**worker_settings['logging'])
         logger.info("Starting Coordinator")
         worker_settings['event_loop'] = {
-            "use_uvloop": {"auto": None, "on": True, "off": False}[args.uvloop]
+            "policy": args.event_loop,
+            "debug": args.event_loop_debug
         }
         if not args.disable_diag:
             diag_settings = {
@@ -95,4 +122,13 @@ class AIOCluster(shellish.Command):
 
 
 def entry():
-    AIOCluster()()
+    """ We perform some magic here to extract the worker_spec from the args
+    before invoking the more complicated argument parsing of the coordinator
+    and its workerservice command. """
+    sniff = argparse.ArgumentParser()
+    sniff.add_argument(**worker_arg_config)
+    #sniff.add_argument('x', nargs=argparse.REMAINDER)
+    args = sniff.parse_known_args()[0]
+    worker = setup.find_worker(args.worker_spec)
+    print("found something", worker)
+    AIOCluster(worker)()  # reevals entire sys.argv
