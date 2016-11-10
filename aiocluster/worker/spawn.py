@@ -7,8 +7,8 @@ import datetime
 import itertools
 import logging
 import os
-import re
 import psutil
+import re
 import subprocess
 import sys
 from . import env
@@ -34,32 +34,32 @@ async def spawn(worker_spec, **kwargs):
 
 
 class WorkerProcess(object):
+    """ Used by the coordinator process to track a WorkerCommand subprocess. """
 
     identer = itertools.count()
     spec_regex = re.compile(r'([a-z_][0-9a-z_]*(\.(?=[a-z_]))?)+', re.I)
 
-    def __init__(self, spec, pycmd, pyflags, bootloader=default_bootloader,
-                 loop=None, settings=None, context=None, args=None,
-                 kwargs=None):
-        self.process = None
+    def __init__(self, spec, pycmd, pyflags, worker_settings=None,
+                 worker_config=None, worker_args=None, loop=None,
+                 bootloader=default_bootloader):
         self.util = None
         self.ident = next(self.identer)
         self.created = self._now()
         self.spec = spec
+        self.process = None
         self._loop = loop
         self._env = os.environ.copy()
         self._env["_AIOCLUSTER_BOOTLOADER"] = env.encode({
-            "args": args or (),
-            "kwargs": kwargs or {},
-            "context": context or {},
-            "settings": settings or {}
+            "settings": worker_settings,
+            "config": worker_config,
+            "args": worker_args,
         })
         self._cmd = pycmd, *pyflags, '-m', bootloader, spec, str(self.ident)
 
     def __str__(self):
+        pid = '-' if self.process is None else self.process.pid
         return '<%s:%d [%s] pid=%s, age=%s>' % (type(self).__name__,
-            self.ident, self.spec, self.process and self.process.pid,
-            self.age())
+            self.ident, self.spec, pid, self.age())
 
     def _now(self):
         return datetime.datetime.now()

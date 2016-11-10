@@ -29,8 +29,7 @@ setup(
     install_requires=requirements,
     entry_points = {
         'console_scripts': [
-            'aiocluster=aiocluster.cli.aiocluster:entry',
-            'aiocluster-control=aiocluster.cli.control.main:entry'
+            'aiocluster=aiocluster.cli:main',
         ],
     },
     classifiers=[

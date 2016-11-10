@@ -6,6 +6,7 @@ import asyncio
 import importlib
 import logging.handlers
 import shellish
+from .worker import command
 
 logger = logging.getLogger('setup')
 
@@ -83,7 +84,7 @@ def get_event_loop(policy='auto', debug=None):
 
 def find_worker(spec):
     """ Return a worker coroutine/service by its spec.  A spec is simply dot
-    seperated symbols.  It should begin with the module path to the remaining
+    separated symbols.  It should begin with the module path to the remaining
     object/function path within the final module's namespace.
 
         MODULE.[MODULE ...].[[OBJECT].]CALLABLE
@@ -118,3 +119,42 @@ def find_worker(spec):
     for x in func_parts:
         offt = getattr(offt, x)
     return offt
+
+
+def _autocommand_class(func):
+    """ Very similar to shellish.autocommand, but curry init args so the
+    command supports zero-arg instantiation required by our bootstrapping
+    process. """
+
+    class AutoCommandClosure(shellish.AutoCommand):
+
+        def __init__(self, **kwargs):
+            name = func.__name__
+            title, desc = shellish.parse_docstring(func)
+            if not title:
+                title = 'AIOCluster autocommand: %s' % name
+            if not desc:
+                desc = ' '
+            super().__init__(name=name, title=title, desc=desc, func=func,
+                             **kwargs)
+
+    return AutoCommandClosure
+
+
+def worker_coerce(obj):
+    """ Convert a worker object to an appropriate WorkerCommand type. """
+    if isinstance(obj, type):
+        if issubclass(obj, command.WorkerCommand):
+            logger.info("Detected WorkerCommand type: %s" % obj)
+            return obj
+        elif issubclass(obj, shellish.Command):
+            Command = obj
+        else:
+            raise TypeError('Invalid worker type')
+    elif callable(obj):
+        logger.info("Using autocommand to build worker: %s" % obj)
+        Command = _autocommand_class(obj)
+    else:
+        raise TypeError('Worker must be a callable or shellish.Command.')
+    return type('Workerized%s' % Command.__name__,
+                (command.WorkerCommand, Command), {})

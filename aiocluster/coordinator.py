@@ -31,8 +31,9 @@ class Coordinator(object):
     kill_timeout = 1
 
     def __init__(self, worker_spec, worker_count=None, worker_settings=None,
-                 worker_restart=True, diag_settings=None, handle_sigterm=True,
-                 handle_sigint=True, loop=None, set_default=True):
+                 worker_config=None, worker_args=None, worker_restart=True,
+                 diag_settings=None, handle_sigterm=True, handle_sigint=True,
+                 loop=None, set_default=True):
         if set_default:
             global _default_coordinator
             if _default_coordinator is not None:
@@ -44,11 +45,12 @@ class Coordinator(object):
         self.worker_spec = worker_spec
         self.worker_count = worker_count or cpu_count()
         self.worker_restart = worker_restart
-        self.worker_settings = {
-            "mixins": ['rpc', 'cli']
+        self._worker_config = {
+            "plugins": ['rpc']
         }
-        if worker_settings is not None:
-            self.worker_settings.update(worker_settings)
+        self._worker_config.update(worker_config or {})
+        self._worker_settings = worker_settings
+        self._worker_args = worker_args
         self.diag_settings = diag_settings
         self.workers = {}
         self.monitors = []
@@ -59,8 +61,7 @@ class Coordinator(object):
         self.ident = '%x' % uuid.uuid4().node
         self.rpc_server = None
         self.diag = None
-        self.ipc_dir = None
-        self.worker_context = {}
+        self._ipc_dir = None
 
     async def start(self):
         assert not self._stopping
@@ -74,10 +75,10 @@ class Coordinator(object):
 
     async def start_rpc(self):
         """ Setup a service for rpc with workers. """
-        self.ipc_dir = tempfile.TemporaryDirectory(prefix='aiocluster-')
-        addr = 'ipc://%s/coord-rpc' % self.ipc_dir.name
-        self.worker_context['coord_rpc_addr'] = addr
-        self.worker_context['ipc_dir'] = self.ipc_dir.name
+        self._ipc_dir = tempfile.TemporaryDirectory(prefix='aiocluster-')
+        addr = 'ipc://%s/coord-rpc' % self._ipc_dir.name
+        self._worker_config['coord_rpc_addr'] = addr
+        self._worker_config['ipc_dir'] = self._ipc_dir.name
         self.rpc_server = s = aionanomsg.RPCServer(aionanomsg.NN_REP)
         s.bind(addr)
         s.add_call(self.register_worker_rpc)
@@ -87,8 +88,8 @@ class Coordinator(object):
         self.rpc_server.stop()
         await self.rpc_server.wait_stopped()
         self.rpc_server = None
-        self.ipc_dir.cleanup()
-        self.ipc_dir = None
+        self._ipc_dir.cleanup()
+        self._ipc_dir = None
 
     async def start_diag(self, **settings):
         self.diag = diag.DiagService(coordinator=self, loop=self._loop,
@@ -126,8 +127,10 @@ class Coordinator(object):
     async def start_worker(self):
         """ Create a worker process and start monitoring it. """
         wp = await worker.spawn(self.worker_spec,
-                                settings=self.worker_settings,
-                                context=self.worker_context, loop=self._loop)
+                                worker_settings=self._worker_settings,
+                                worker_config=self._worker_config,
+                                worker_args=self._worker_args,
+                                loop=self._loop)
         mt = self._loop.create_task(self.worker_monitor_wrap(wp))
         wp.monitor_task = mt
         self.workers[wp.ident] = wp

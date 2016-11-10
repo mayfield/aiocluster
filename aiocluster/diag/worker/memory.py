@@ -9,9 +9,9 @@ import objgraph
 class MemoryRPCHandler(object):
     """ Interface to objgraph calls for finding memory mgmt problems. """
 
-    def __init__(self, worker):
-        worker.add_worker_rpc_callback(self.report, 'memory_report')
-        worker.add_worker_rpc_callback(self.growth, 'memory_growth')
+    def __init__(self, rpc_plugin):
+        rpc_plugin.add_handler('memory_report', self.report)
+        rpc_plugin.add_handler('memory_growth', self.growth)
 
     async def report(self, limit=None):
         return objgraph.most_common_types(shortnames=False, limit=limit)

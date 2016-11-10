@@ -1,5 +1,5 @@
 """
-Profiler RPC calls for WorkerService.
+Profiler RPC calls for WorkerCommand.
 """
 
 import cProfile
@@ -7,12 +7,12 @@ import cProfile
 
 class ProfilerRPCHandler(object):
 
-    def __init__(self, worker):
+    def __init__(self, rpc_plugin):
         self._profiler_running = False
         self._profiler = None
-        worker.add_worker_rpc_callback(self.start, 'profiler_start')
-        worker.add_worker_rpc_callback(self.stop, 'profiler_stop')
-        worker.add_worker_rpc_callback(self.report, 'profiler_report')
+        rpc_plugin.add_handler('profiler_start', self.start)
+        rpc_plugin.add_handler('profiler_stop', self.stop)
+        rpc_plugin.add_handler('profiler_report', self.report)
 
     async def start(self):
         if self._profiler_running:
