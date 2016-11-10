@@ -145,14 +145,15 @@ def worker_coerce(obj):
     """ Convert a worker object to an appropriate WorkerCommand type. """
     if isinstance(obj, type):
         if issubclass(obj, command.WorkerCommand):
-            logger.info("Detected WorkerCommand type: %s" % obj)
+            logger.info("Detected native aiocluster.WorkerCommand: %s" % obj)
             return obj
         elif issubclass(obj, shellish.Command):
+            logger.info("Detected shellish.Command: %s" % obj)
             Command = obj
         else:
             raise TypeError('Invalid worker type')
     elif callable(obj):
-        logger.info("Using autocommand to build worker: %s" % obj)
+        logger.warning("Using autocommand to build worker: %s" % obj)
         Command = _autocommand_class(obj)
     else:
         raise TypeError('Worker must be a callable or shellish.Command.')
