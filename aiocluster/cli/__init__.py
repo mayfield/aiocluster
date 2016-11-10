@@ -5,6 +5,7 @@ Command line interface for managing an aiocluster service.
 import pkg_resources
 import shellish
 from . import run, control
+from shellish.command import contrib
 
 
 class RootCommand(shellish.Command):
@@ -19,6 +20,8 @@ class RootCommand(shellish.Command):
         self.add_argument('--version', action='version', version=version)
         self.add_subcommand(run.RunCommand)
         self.add_subcommand(control.ControlCommand)
+        self.add_subcommand(contrib.Tree)
+        self.add_subcommand(contrib.SystemCompletion)
 
 
 def main():

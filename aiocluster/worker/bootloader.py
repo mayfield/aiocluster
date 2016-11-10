@@ -22,6 +22,8 @@ class Launcher(shellish.Command):
     fork-without-exec pattern.  Context is passed through the temporary env
     variable that is purged on startup to avoid blatantly sharing secrets. """
 
+    name = 'launcher'
+
     def setup_args(self, parser):
         self.add_argument('worker_spec')
         self.add_argument('ident', type=int)
