@@ -45,14 +45,10 @@ class WorkerCommand(shellish.Command):
             self._loop.run_until_complete(plugin())
         self.fire_event('prerun', args)
         self.prerun(args)
-        if asyncio.iscoroutinefunction(self.run):
-            run = self.run
-        else:
-            async def run_corofunc_wrap(*_args, **_kwargs):
-                return self.run(*_args, **_kwargs)
-            run = run_corofunc_wrap
         try:
-            result = self._loop.run_until_complete(run(args))
+            result = self.run(args)
+            if asyncio.iscoroutine(result):
+                result = self._loop.run_until_complete(result)
         except (SystemExit, Exception) as e:
             self.postrun(args, exc=e)
             self.fire_event('postrun', args, exc=e)
