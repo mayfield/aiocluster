@@ -121,7 +121,7 @@ def find_worker(spec):
     return offt
 
 
-def _autocommand_class(func):
+def _autocommand_class(func, name=None, title=None, desc=None):
     """ Very similar to shellish.autocommand, but curry init args so the
     command supports zero-arg instantiation required by our bootstrapping
     process. """
@@ -129,13 +129,12 @@ def _autocommand_class(func):
     class AutoCommandClosure(shellish.AutoCommand):
 
         def __init__(self, **kwargs):
-            name = func.__name__
-            title, desc = shellish.parse_docstring(func)
-            if not title:
-                title = 'AIOCluster autocommand: %s' % name
-            if not desc:
-                desc = ' '
-            super().__init__(name=name, title=title, desc=desc, func=func,
+            _name = func.__name__ if name is None else name
+            doctitle, docdesc = shellish.parse_docstring(func)
+            _title = doctitle if title is None else title
+            _title = _title or 'Worker command: %s' % name
+            _desc = docdesc if desc is None else desc
+            super().__init__(name=_name, title=_title, desc=_desc, func=func,
                              **kwargs)
 
     return AutoCommandClosure
@@ -152,6 +151,12 @@ def worker_coerce(obj):
             Command = obj
         else:
             raise TypeError('Invalid worker type')
+    elif isinstance(obj, shellish.Command):
+        if isinstance(obj, shellish.AutoCommand):
+            Command = _autocommand_class(obj.func, name=obj.name,
+                                         title=obj.title, desc=obj.desc)
+        else:
+            raise TypeError('Worker shellish.Command must be a type.')
     elif callable(obj):
         logger.warning("Using autocommand to build worker: %s" % obj)
         Command = _autocommand_class(obj)
