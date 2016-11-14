@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>AIOCluster - Diagnostics</title>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+        <link rel="stylesheet" type="text/css" href="bower_components/semantic/dist/semantic.css">
+        <link rel="stylesheet" type="text/css" href="style/site.css">
+        <script src="bower_components/jquery/dist/jquery.js"></script>
+        <script src="bower_components/moment/moment.js"></script>
+        <script src="bower_components/jsrender/jsrender.js"></script>
+        <script src="bower_components/semantic/dist/semantic.js"></script>
+        <script src="bower_components/chart.js/dist/Chart.bundle.js"></script>
+        <script src="src/common.js"></script>
+        <script src="src/profiler.js"></script>
+        <script id="prof-template" type="text/x-jsrender">
+            <table class="ui table">
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Inline Percent</th>
+                        <th>Inline Time</th>
+                        <th>Total Time</th>
+                        <th>Time/call</th>
+                        <th>Calls/second</th>
+                        <th>Total Calls</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{for stats}}
+                        <tr>
+                            <td><i class="user icon"></i>{{>call}}</td>
+                            <td>{{percent:cpu_percent}}</td>
+                            <td>{{:inlinetime.toFixed(2)}}</td>
+                            <td>{{round:totaltime}}</td>
+                            <td>{{round:percall_time * 1000000}}μs</td>
+                            <td>{{humanint:call_rate}}</td>
+                            <td>{{humanint:callcount}}</td>
+                        </tr>
+                    {{/for}}
+              </tbody>
+            </table>
+        </script>
+    </head>
+    <body>
+
+        <!-- Header Bar -->
+        <div class="ui fixed inverted red menu">
+            <div class="ui container">
+                <a href="/" class="header item">
+                    <img class="logo" src="assets/images/logo.png">
+                    AIOCluster
+                </a>
+                <div class="section ui simple dropdown item">Performance Profiler<i class="dropdown icon"></i>
+                    <div class="menu">
+                      <a class="item" href="memory.html">Memory Tracker</a>
+                      <a class="item" href="/">Processes</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="ui main container">
+            <h1 class="ui header">Performance Profiler</h1>
+            <div id="prof-holder"></div>
+        </div>
+
+        <!-- footer -->
+        <div class="ui inverted vertical footer segment">
+          <div class="ui horizontal inverted medium divided link list">
+            <a class="item" href="https://github.com/mayfield/aiocluster">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </body>
+</html>

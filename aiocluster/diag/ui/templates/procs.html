@@ -1,0 +1,24 @@
+<table class="ui table">
+    <thead>
+        <tr>
+            <th>Worker</th>
+            <th>PID</th>
+            <th>Status</th>
+            <th>Memory</th>
+            <th>CPU</th>
+            <th>Age</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for workers}}
+            <tr>
+                <td><i class="user icon"></i><sup>{{:ident}}</sup></td>
+                <td>{{:pid}}</td>
+                <td>{{:status}}</td>
+                <td>{{megabytes:memory.rss}}</td>
+                <td>{{percent:cpu_percent / 100}}</td>
+                <td>{{humantime:age}}</time></td>
+            </tr>
+        {{/for}}
+  </tbody>
+</table>

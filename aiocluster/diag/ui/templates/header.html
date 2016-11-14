@@ -1,0 +1,15 @@
+<div class="ui fixed inverted red menu">
+    <div class="ui container">
+        <a href="/" class="header item">
+            <img class="logo" src="assets/images/logo.png">
+            AIOCluster
+        </a>
+        <div class="section ui simple dropdown item">{{:active_page_title}}<i class="dropdown icon"></i>
+            <div class="menu">
+                {{for inactive_pages}}
+                    <a class="item" href="{{:url}}">{{:title}}</a>
+                {{/for}}
+            </div>
+        </div>
+    </div>
+</div>

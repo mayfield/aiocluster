@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>AIOCluster - Diagnostics</title>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+        <link rel="stylesheet" type="text/css" href="bower_components/semantic/dist/semantic.css">
+        <link rel="stylesheet" type="text/css" href="style/site.css">
+        <script src="bower_components/jquery/dist/jquery.js"></script>
+        <script src="bower_components/moment/moment.js"></script>
+        <script src="bower_components/jsrender/jsrender.js"></script>
+        <script src="bower_components/semantic/dist/semantic.js"></script>
+        <script src="bower_components/chart.js/dist/Chart.js"></script>
+        <script src="src/common.js"></script>
+        <script src="src/procs.js"></script>
+        <script src="src/loader.js"></script>
+    </head>
+    <body>
+        <div id="header-holder"></div>
+
+        <div class="ui main container">
+
+            <div class="ui statistics">
+                <div class="statistic">
+                    <div class="label">Workers</div>
+                    <div class="value">
+                        <i class="users icon"></i>
+                        <span id="worker-count">-</span>
+                    </div>
+                </div>
+                <div class="statistic">
+                    <div class="label">Memory</div>
+                    <div class="value" id="mem-usage"></div>
+                </div>
+                <div class="statistic">
+                    <div class="label">CPU</div>
+                    <div class="value" id="cpu-usage"></div>
+                </div>
+            </div>
+            <div class="ui header-graph segment">
+                <canvas id="cpu-graph"/>
+            </div>
+            <div class="ui segment">
+                <canvas id="mem-graph"/>
+            </div>
+
+            <h1 class="ui header">Processes</h1>
+            <div id="procs-holder"></div>
+        </div>
+
+        <div id="footer-holder"></div>
+        <!-- footer -->
+        <div class="ui inverted vertical footer segment">
+          <div class="ui horizontal inverted medium divided link list">
+            <a class="item" href="https://github.com/mayfield/aiocluster">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </body>
+</html>
