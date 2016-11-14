@@ -218,8 +218,3 @@ class Top(ProfilerMixin, shellish.Command):
                 self.human_num(x[1]['callcount'])
             ] for x in stats)
             time.sleep(args.refresh)
-
-
-
-def entry():
-    AIOClusterControl()()
