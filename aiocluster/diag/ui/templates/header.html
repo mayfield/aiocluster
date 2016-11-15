@@ -4,11 +4,11 @@
             <img class="logo" src="assets/images/logo.png">
             AIOCluster
         </a>
-        <div class="section ui simple dropdown item">{{:active_page_title}}<i class="dropdown icon"></i>
+        <div class="section ui simple dropdown item">{{location.pathname}}<i class="dropdown icon"></i>
             <div class="menu">
-                {{for inactive_pages}}
-                    <a class="item" href="{{:url}}">{{:title}}</a>
-                {{/for}}
+                <a class="item" href="profiler.html">Memory Tracker</a>
+                <a class="item" href="profiler.html">Performance Profiler</a>
+                <a class="item" href="profiler.html">Processes</a>
             </div>
         </div>
     </div>

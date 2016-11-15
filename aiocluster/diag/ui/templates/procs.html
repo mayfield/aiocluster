@@ -10,15 +10,15 @@
         </tr>
     </thead>
     <tbody>
-        {{for workers}}
+        {{#each workers}}
             <tr>
-                <td><i class="user icon"></i><sup>{{:ident}}</sup></td>
-                <td>{{:pid}}</td>
-                <td>{{:status}}</td>
-                <td>{{megabytes:memory.rss}}</td>
-                <td>{{percent:cpu_percent / 100}}</td>
-                <td>{{humantime:age}}</time></td>
+                <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
+                <td>{{this.pid}}</td>
+                <td>{{this.status}}</td>
+                <td>{{megabytes this.memory.rss}}</td>
+                <td>{{percent this.cpu_percent}}</td>
+                <td>{{humantime this.age}}</time></td>
             </tr>
-        {{/for}}
+        {{/each}}
   </tbody>
 </table>
