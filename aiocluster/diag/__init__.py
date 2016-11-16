@@ -31,7 +31,8 @@ class DiagService(object):
 
     async def start(self):
         self._app = web.Application(loop=self._loop)
-        self._app.router.add_route('GET', '/', self.index_redir)
+        for x in ('/', '/ui', '/ui/'):
+            self._app.router.add_route('GET', x, self.about_redir)
         self._app.router.add_route('GET', '/health', self.health)
         self._app.router.add_route('GET', '/api', api.router.directory)
         self._app.router.add_route('*', '/api/{path:.*}', api.router.root)
@@ -41,8 +42,8 @@ class DiagService(object):
         self._server = await self._loop.create_server(self._handler, *listen)
         logger.info('Diag web server running: http://%s:%s' % listen)
 
-    async def index_redir(self, request):
-        return web.HTTPFound('/ui/index.html')
+    async def about_redir(self, request):
+        return web.HTTPFound('/ui/about.html')
 
     async def health(self, request):
         # XXX/TODO Create thresholds for mem usage and possibly cpu usage to

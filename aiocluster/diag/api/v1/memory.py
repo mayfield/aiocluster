@@ -8,7 +8,7 @@ from .. import util
 from .... import coordinator
 
 
-class Memory(util.Resource):
+class MemoryResource(util.Resource):
 
     @property
     def coord(self):

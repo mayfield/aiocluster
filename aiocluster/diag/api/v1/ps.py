@@ -16,14 +16,14 @@ class PSResource(util.Resource):
             "coordinator": {
                 "pid": coord_util.pid,
                 "cpu_times": coord_util.cpu_times()._asdict(),
-                "memory": coord_util.memory_info()._asdict()
+                "memory": coord_util.memory_info()._asdict(),
+                "cpu_percent": coord_util.cpu_percent(),
             },
             "workers": [{
                 "ident": x.ident,
                 "age": x.age().total_seconds(),
                 "pid": x.util.pid,
                 "threads": x.util.num_threads(),
-                #"connections": len(x.util.connections()),
                 "cpu_percent": x.util.cpu_percent(),
                 "cpu_times": x.util.cpu_times()._asdict(),
                 "memory": x.util.memory_info()._asdict(),

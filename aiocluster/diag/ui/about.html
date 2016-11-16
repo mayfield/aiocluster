@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>AIOCluster - About</title>
+        <meta charset="utf-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+        <link rel="stylesheet" type="text/css" href="node_modules/semantic-ui-css/semantic.css"/>
+        <link rel="stylesheet" type="text/css" href="style/site.css"/>
+        <script src="node_modules/jquery/dist/jquery.js"></script>
+        <script src="node_modules/moment/moment.js"></script>
+        <script src="node_modules/semantic-ui-css/semantic.js"></script>
+        <script src="node_modules/chartist/dist/chartist.js"></script>
+        <script src="node_modules/handlebars/dist/handlebars.js"></script>
+        <script src="src/common.js"></script>
+        <script src="src/loader.js"></script>
+        <script src="src/about.js"></script>
+    </head>
+    <body>
+
+        <script href="templates/header.html" type="text/x-template"></script>
+
+        <div class="ui main container">
+
+            <script id="procs-template" type="text/x-template">
+
+                <h2 class="ui header">Platform</h2>
+                <table class="ui red definition table">
+                    <tr>
+                        <td>System</td>
+                        <td>{{platform.system}} {{platform.machine}}</td>
+                    </tr>
+                    <tr>
+                        <td>Python Version</td>
+                        <td>{{platform.python_implementation}} 
+                            {{platform.python_version}}</td>
+                    </tr>
+                </table>
+
+                <h2 class="ui header">Worker</h2>
+                <table class="ui blue definition table">
+                    <tr>
+                        <td>Spec</td>
+                        <td>{{coord.worker_spec}}</td>
+                    </tr>
+                    <tr>
+                        <td>Args</td>
+                        <td>
+                            {{#each coord.worker_args}}{{#if @index}}, {{/if}}
+                                <span style="color: #2185d0;">{{@key}}</span>=<b>{{this}}</b>{{/each}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Plugins</td>
+                        <td>{{coord.worker_config.plugins}}</td>
+                    </tr>
+                    <tr>
+                        <td>Terminate Timeout</td>
+                        <td>{{coord.term_timeout}} <div class="ui label">second(s)</div></td>
+                    </tr>
+                    <tr>
+                        <td>Kill Timeout</td>
+                        <td>{{coord.kill_timeout}} <div class="ui label">second(s)</div></td>
+                    </tr>
+                </table>
+
+                <h2 class="ui header">Event Loop</h2>
+                <table class="ui green definition table">
+                    <tr>
+                        <td>Policy</td>
+                        <td>{{event_loop.policy}}</td>
+                    </tr>
+                    <tr>
+                        <td>Debug</td>
+                        <td>
+                            <div class="ui toggle checkbox">
+                                <input type="checkbox" disabled="disabled"
+                                    {{#if event_loop.debug}}checked=""{{/if}}/>
+                                <label></label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Loop</td>
+                        <td>{{event_loop.loop}}</td>
+                    </tr>
+                </table>
+                   
+                <h2 class="ui header">Logging</h2>
+                <table class="ui orange definition table">
+                    <tr>
+                        <td>Level</td>
+                        <td>{{coord.worker_settings.logging.level}}</td>
+                    </tr>
+                    <tr>
+                        <td>Kind</td>
+                        <td>{{coord.worker_settings.logging.kind}}</td>
+                    </tr>
+                </table>
+                   
+
+            </script>
+        </div>
+
+        <script href="templates/footer.html" type="text/x-template"></script>
+
+    </body>
+</html>

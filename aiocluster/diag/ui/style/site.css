@@ -9,12 +9,18 @@ body {
 
 .main.container {
     margin-top: 5em;
+    margin-bottom: 8em;
 }
 
 .ui.footer.segment {
-    margin: 5em 0em 0em;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    padding-left: 2em;
 }
 
-.header-graph canvas {
-    height: 100px;
+/* default to class=collapsing for first col */
+.ui.table.definition tbody td:first-child {
+    width: 20%;
+    white-space: nowrap;
 }

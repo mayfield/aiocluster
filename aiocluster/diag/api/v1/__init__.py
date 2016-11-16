@@ -2,11 +2,12 @@
 Route URLs to correct resource handler.
 """
 
-from . import profiler, memory, ps
+from . import profiler, memory, ps, about
 from .. import util
 
 router = util.Router({
     'profiler': profiler.ProfilerView,
-    'memory': memory.Memory(),
-    'ps': ps.PSResource()
+    'memory': memory.MemoryResource(),
+    'ps': ps.PSResource(),
+    'about': about.AboutResource()
 })

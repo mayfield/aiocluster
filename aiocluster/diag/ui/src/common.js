@@ -3,6 +3,7 @@
 var aioc = window.aioc || {};
 
 aioc.conv = {
+    round: Math.round,
     megabytes: function(val) {
         return Math.round(val / 1024 / 1024).toString() + ' MB';
     },
@@ -30,6 +31,9 @@ aioc.conv = {
                 return s.replace(/\.$/, '');
             }
         }
+    },
+    toFixed: function(val, prec) {
+        return val.toFixed(prec);
     }
 };
 
@@ -39,11 +43,11 @@ Object.keys(aioc.conv).forEach(function(key) {
 
 
 aioc.util = aioc.util || {};
-aioc.util.sleep = function(seconds) {
+aioc.util.sleep = async function(seconds) {
     return new Promise(r => setTimeout(r, seconds * 1000));
 };
 
-    /* Emulate Python's asyncio.as_completed */
+/* Emulate Python's asyncio.as_completed */
 aioc.util.as_completed = function*(promises) {
     const pending = new Set(promises);
     for (const p of pending) {
