@@ -38,11 +38,11 @@
                     <tbody>
                         {{#each stats}}
                             <tr>
-                                <td><i class="user icon"></i>{{{call}}}</td>
+                                <td>{{call}}</td>
                                 <td>{{percent cpu_percent}}</td>
                                 <td>{{toFixed inlinetime 2}}</td>
-                                <td>{{round totaltime}}</td>
-                                <td>{{round percall_time}}μs</td>
+                                <td>{{toFixed totaltime 2}}</td>
+                                <td>{{round percall_time}}&nbsp;<small>μs</small></td>
                                 <td>{{humanint call_rate}}</td>
                                 <td>{{humanint callcount}}</td>
                             </tr>
@@ -50,6 +50,7 @@
                   </tbody>
                 </table>
             </script>
+            <div id="prof-holder"></div>
         </div>
 
         <script href="templates/footer.html" type="text/x-template"></script>

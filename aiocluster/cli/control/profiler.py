@@ -29,7 +29,7 @@ class Start(ProfilerMixin, shellish.Command):
     name = 'start'
 
     def run(self, args):
-        print(requests.put(args.url + self.urn + 'start'))
+        requests.put(args.url + self.urn + 'active', json=True)
 
 
 class Stop(ProfilerMixin, shellish.Command):
@@ -37,7 +37,7 @@ class Stop(ProfilerMixin, shellish.Command):
     name = 'stop'
 
     def run(self, args):
-        requests.put(args.url + self.urn + 'stop')
+        requests.put(args.url + self.urn + 'active', json=False)
 
 
 class Report(ProfilerMixin, shellish.Command):
@@ -144,7 +144,7 @@ class Top(ProfilerMixin, shellish.Command):
             print('\0338')  # restore
 
     def _run(self, args):
-        requests.put(args.url + self.urn + 'start')
+        requests.put(args.url + self.urn + 'active', json=True)
         prev_totals = {}
         prev_ts = None
         while True:
@@ -173,8 +173,7 @@ class Top(ProfilerMixin, shellish.Command):
             if prev_ts is None:
                 prev_ts = ts
                 prev_totals = totals
-                shellish.vtmlprint("<b>Collecting...</b>")
-                time.sleep(args.refresh)
+                time.sleep(0.100)  # quickly to get data up.
                 continue
             period = ts - prev_ts
             for call, stats in totals.items():
@@ -199,7 +198,7 @@ class Top(ProfilerMixin, shellish.Command):
             del stats[height-3:]
             table = shellish.Table(headers=[
                 'Function',
-                'CPU%',
+                'Inline %',
                 'Inline-Time',
                 'Total-Time',
                 'Time/call',

@@ -15,8 +15,7 @@ class ActiveResource(util.Resource):
     """ View and control the profiler state. """
 
     use_docstring = True
-
-    default_allowed_methods = {
+    allowed_methods = {
         'GET',
         'PUT'
     }

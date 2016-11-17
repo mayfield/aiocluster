@@ -6,7 +6,7 @@ $(document).ready(function() {
         const procs_tpl = Handlebars.compile(tpl_tag.html());
         const target_el = tpl_tag.parent();
 
-        target_el.html(procs_tpl(await $.get('/api/v1/about')));
+        target_el.html(procs_tpl(await aioc.api.get('about')));
         $('.ui.accordion').accordion();
     })();
 });

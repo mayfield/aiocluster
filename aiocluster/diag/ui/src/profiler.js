@@ -6,17 +6,14 @@ $(document).ready(function() {
         const tpl = Handlebars.compile(tpl_tag.html());
         const target_el = tpl_tag.parent();
 
-        await $.ajax({
-            url: '/api/v1/profiler/start',
-            method: 'PUT'
-        });
+        await aioc.api.put('profiler/active', true);
 
         let prev_totals = {};
         let prev_ts = null;
         while (true) {
             let height = 25; // XXX Pull from UI.
             let sortkey = 'inlinetime'; // XXX pull from ui.
-            let report = await $.get('/api/v1/profiler/report');
+            let report = await aioc.api.get('profiler/report');
             let ts = (new Date()).getTime();
             let totals = {};
             report.forEach(function(stats) {
@@ -66,10 +63,9 @@ $(document).ready(function() {
             prev_ts = ts;
             prev_totals = totals;
             let stats = Object.keys(totals).map(key => totals[key]);
-            //let newstats = stats.sort((a, b) => a < b ? 1 : -1);
             let newstats = stats.sort((a, b) => a[sortkey] < b[sortkey] ? 1 : -1);
             $('#prof-holder').html(tpl({stats: newstats}));
-            await aioc.util.sleep(1);
+            await aioc.util.sleep(1); /* XXX pull from UI */
         }
     })();
 });

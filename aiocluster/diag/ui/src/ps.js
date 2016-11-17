@@ -7,7 +7,7 @@ $(document).ready(function() {
         const target_el = tpl_tag.parent();
 
         while (true) {
-            const data = await $.get('/api/v1/ps');
+            const data = await aioc.api.get('ps');
             data.mem_total = data.coordinator.memory.rss;
             data.cpu_total = data.coordinator.cpu_percent;
             for (const x of data.workers) {

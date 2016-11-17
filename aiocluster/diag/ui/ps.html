@@ -33,7 +33,7 @@
                     </div>
                     <div class="statistic">
                         <div class="label">Memory</div>
-                        <div class="value">{{megabytes mem_total}}</div>
+                        <div class="value">{{humanbytes mem_total}}</div>
                     </div>
                     <div class="statistic">
                         <div class="label">CPU</div>
@@ -59,7 +59,7 @@
                                 <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
                                 <td>{{this.pid}}</td>
                                 <td>{{this.status}}</td>
-                                <td>{{megabytes this.memory.rss}}</td>
+                                <td>{{humanbytes this.memory.rss}}</td>
                                 <td>{{percent this.cpu_percent}}</td>
                                 <td>{{humantime this.age}}</time></td>
                             </tr>
@@ -85,7 +85,7 @@
                                 <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
                                 <td>{{this.pid}}</td>
                                 <td>{{this.status}}</td>
-                                <td>{{megabytes this.memory.rss}}</td>
+                                <td>{{humanbytes this.memory.rss}}</td>
                                 <td>{{percent this.cpu_percent}}</td>
                                 <td>{{humantime this.age}}</time></td>
                             </tr>

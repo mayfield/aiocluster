@@ -39,7 +39,7 @@ class AbstractRoute(object):
     def check_request(self, request):
         """ Assert that the method being attempted is valid. """
         method = request.method
-        if method not in self.allowed_methods:
+        if not ({method, '*'} & self.allowed_methods):
             raise web.HTTPMethodNotAllowed(method, self.allowed_methods)
 
     async def __call__(self, request, *args, **kwargs):
@@ -79,7 +79,7 @@ class Router(AbstractRoute):
     """ Redirect traffic to another route or resource. """
 
     allowed_methods = {
-        'GET'
+        '*'
     }
 
     def __init__(self, routes, **kwargs):

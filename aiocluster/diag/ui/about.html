@@ -22,7 +22,6 @@
                 padding-top: .5em;
             }
         </style>
-            
     </head>
     <body>
 
@@ -34,22 +33,26 @@
 
                 <div class="ui accordion">
                     <div class="title active">
-                        <i class="dropdown icon"></i><b>Platform</b>
+                        <i class="dropdown icon"></i><b>System</b>
                     </div>
                     <div class="content active">
                         <table class="ui red definition table">
                             <tr>
                                 <td>System</td>
-                                <td>{{platform.system}} {{platform.machine}}</td>
+                                <td>{{system.system}} {{system.machine}}</td>
                             </tr>
                             <tr>
                                 <td>Python Version</td>
-                                <td>{{platform.python_implementation}} 
-                                    {{platform.python_version}}</td>
+                                <td>{{system.python_implementation}}
+                                    {{system.python_version}}</td>
                             </tr>
                             <tr>
                                 <td>CPU Count</td>
-                                <td>{{platform.cpu_count}}</td>
+                                <td>{{system.cpu_count}}</td>
+                            </tr>
+                            <tr>
+                                <td>Memory</td>
+                                <td>{{humanbytes system.memory}}</td>
                             </tr>
                         </table>
                     </div>
@@ -133,7 +136,7 @@
                         </table>
                     </div>
                 </div>
-                   
+
             </script>
         </div>
 
