@@ -22,6 +22,7 @@
 
         <div class="ui main container">
             <script id="procs-template" type="text/x-template">
+                <h3 class="ui header">Overall Statistics</h3>
                 <div class="ui statistics">
                     <div class="statistic">
                         <div class="label">Workers</div>
@@ -40,33 +41,57 @@
                     </div>
                 </div>
 
-                <h1 class="ui header">Processes</h1>
-                <div id="procs-holder">
-                    <table class="ui table">
-                        <thead>
+                <h3 class="ui header">Coordinator</h3>
+                <table class="ui table">
+                    <thead>
+                        <tr>
+                            <th>Worker</th>
+                            <th>PID</th>
+                            <th>Status</th>
+                            <th>Memory</th>
+                            <th>CPU</th>
+                            <th>Age</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each workers}}
                             <tr>
-                                <th>Worker</th>
-                                <th>PID</th>
-                                <th>Status</th>
-                                <th>Memory</th>
-                                <th>CPU</th>
-                                <th>Age</th>
+                                <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
+                                <td>{{this.pid}}</td>
+                                <td>{{this.status}}</td>
+                                <td>{{megabytes this.memory.rss}}</td>
+                                <td>{{percent this.cpu_percent}}</td>
+                                <td>{{humantime this.age}}</time></td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {{#each workers}}
-                                <tr>
-                                    <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
-                                    <td>{{this.pid}}</td>
-                                    <td>{{this.status}}</td>
-                                    <td>{{megabytes this.memory.rss}}</td>
-                                    <td>{{percent this.cpu_percent}}</td>
-                                    <td>{{humantime this.age}}</time></td>
-                                </tr>
-                            {{/each}}
-                        </tbody>
-                    </table>
-                </div>
+                        {{/each}}
+                    </tbody>
+                </table>
+
+                <h3 class="ui header">Worker Processes</h3>
+                <table class="ui table">
+                    <thead>
+                        <tr>
+                            <th>Worker</th>
+                            <th>PID</th>
+                            <th>Status</th>
+                            <th>Memory</th>
+                            <th>CPU</th>
+                            <th>Age</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each workers}}
+                            <tr>
+                                <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
+                                <td>{{this.pid}}</td>
+                                <td>{{this.status}}</td>
+                                <td>{{megabytes this.memory.rss}}</td>
+                                <td>{{percent this.cpu_percent}}</td>
+                                <td>{{humantime this.age}}</time></td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
             </script>
         </div>
 

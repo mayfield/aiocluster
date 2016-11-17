@@ -8,6 +8,9 @@ from .... import coordinator
 
 
 class PSResource(util.Resource):
+    """ Process information. """
+
+    use_docstring = True
 
     async def get(self, request):
         coord = coordinator.get_coordinator()

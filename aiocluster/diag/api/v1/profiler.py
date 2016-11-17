@@ -4,56 +4,50 @@
 
 import asyncio
 import logging
-from aiohttp import web
+from .. import util
 from .... import coordinator
+from aiohttp import web
 
 logger = logging.getLogger('api.v1.profiler')
 
 
-class ProfilerView(web.View):
+class ActiveResource(util.Resource):
+    """ View and control the profiler state. """
 
-    actions = [
-        'stop',
-        'start',
-        'report'
-    ]
+    use_docstring = True
 
-    def __init__(self, request, paths):
-        self.paths = paths
-        self.coord = coordinator.get_coordinator()
-        super().__init__(request)
+    default_allowed_methods = {
+        'GET',
+        'PUT'
+    }
 
-    async def get(self):
-        if len(self.paths) != 1 or self.paths[0] not in self.actions:
-            return web.json_response(['stop', 'start', 'report'], status=404)
-        action = self.paths[0]
-        if action != 'report':
-            raise web.HTTPMethodNotAllowed('get', ['put'])
-        return await self.report()
-
-    async def report(self):
-        batch = [x.rpc.call('profiler_report')
-                 for x in self.coord.workers.values()]
+    async def put(self, request):
+        active = await self.get_request_content(request)
+        if not isinstance(active, bool):
+            raise  web.HTTPBadRequest(text='Bool type expected')
+        workers = coordinator.get_coordinator().workers.values()
+        batch = [x.rpc.call('profiler_set_active', active) for x in workers]
         return await asyncio.gather(*batch)
 
-    async def put(self):
-        if len(self.paths) != 1 or self.paths[0] not in self.actions:
-            return web.json_response(['stop', 'start', 'report'], status=404)
-        action = self.paths[0]
-        if action == 'report':
-            raise web.HTTPMethodNotAllowed('put', ['get'])
-        workers = self.coord.workers.values()
-        if self.request.content_length:
-            try:
-                args = await self.request.json()
-            except ValueError as e:
-                raise  web.HTTPBadRequest(text='Invalid JSON: %s' % e)
-            worker = args.get('worker')
-            if worker is not None:
-                try:
-                    workers = [self.coord.workers[worker]]
-                except KeyError:
-                    raise web.HTTPBadRequest(text='Missing/Invalid `worker`')
-        call = 'profiler_%s' % action
-        batch = [x.rpc.call(call) for x in workers]
+    async def get(self, request):
+        workers = coordinator.get_coordinator().workers.values()
+        batch = [x.rpc.call('profiler_get_active') for x in workers]
         return await asyncio.gather(*batch)
+
+
+class ReportResource(util.Resource):
+    """ Gather profiler stats from all workers. """
+
+    use_docstring = True
+
+    async def get(self, request):
+        workers = coordinator.get_coordinator().workers.values()
+        batch = [x.rpc.call('profiler_report') for x in workers]
+        return await asyncio.gather(*batch)
+
+
+ProfilerRouter = util.Router({
+    'active': ActiveResource(),
+    'report': ReportResource(),
+}, desc="Profiler endpoints.")
+

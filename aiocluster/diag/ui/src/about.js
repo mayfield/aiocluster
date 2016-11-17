@@ -7,5 +7,6 @@ $(document).ready(function() {
         const target_el = tpl_tag.parent();
 
         target_el.html(procs_tpl(await $.get('/api/v1/about')));
+        $('.ui.accordion').accordion();
     })();
 });

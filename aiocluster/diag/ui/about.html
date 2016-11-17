@@ -15,6 +15,14 @@
         <script src="src/common.js"></script>
         <script src="src/loader.js"></script>
         <script src="src/about.js"></script>
+        <style>
+            .ui.main .ui.accordion .title {
+                font-size: 1.25em;
+                margin-top: 1.5em;
+                padding-top: .5em;
+            }
+        </style>
+            
     </head>
     <body>
 
@@ -24,81 +32,108 @@
 
             <script id="procs-template" type="text/x-template">
 
-                <h2 class="ui header">Platform</h2>
-                <table class="ui red definition table">
-                    <tr>
-                        <td>System</td>
-                        <td>{{platform.system}} {{platform.machine}}</td>
-                    </tr>
-                    <tr>
-                        <td>Python Version</td>
-                        <td>{{platform.python_implementation}} 
-                            {{platform.python_version}}</td>
-                    </tr>
-                </table>
+                <div class="ui accordion">
+                    <div class="title active">
+                        <i class="dropdown icon"></i><b>Platform</b>
+                    </div>
+                    <div class="content active">
+                        <table class="ui red definition table">
+                            <tr>
+                                <td>System</td>
+                                <td>{{platform.system}} {{platform.machine}}</td>
+                            </tr>
+                            <tr>
+                                <td>Python Version</td>
+                                <td>{{platform.python_implementation}} 
+                                    {{platform.python_version}}</td>
+                            </tr>
+                            <tr>
+                                <td>CPU Count</td>
+                                <td>{{platform.cpu_count}}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
 
-                <h2 class="ui header">Worker</h2>
-                <table class="ui blue definition table">
-                    <tr>
-                        <td>Spec</td>
-                        <td>{{coord.worker_spec}}</td>
-                    </tr>
-                    <tr>
-                        <td>Args</td>
-                        <td>
-                            {{#each coord.worker_args}}{{#if @index}}, {{/if}}
-                                <span style="color: #2185d0;">{{@key}}</span>=<b>{{this}}</b>{{/each}}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Plugins</td>
-                        <td>{{coord.worker_config.plugins}}</td>
-                    </tr>
-                    <tr>
-                        <td>Terminate Timeout</td>
-                        <td>{{coord.term_timeout}} <div class="ui label">second(s)</div></td>
-                    </tr>
-                    <tr>
-                        <td>Kill Timeout</td>
-                        <td>{{coord.kill_timeout}} <div class="ui label">second(s)</div></td>
-                    </tr>
-                </table>
+                <div class="ui accordion">
+                    <div class="title active">
+                        <i class="dropdown icon"></i><b>Worker</b>
+                    </div>
+                    <div class="content active">
+                        <table class="ui blue definition table">
+                            <tr>
+                                <td>Spec</td>
+                                <td>{{coord.worker_spec}}</td>
+                            </tr>
+                            <tr>
+                                <td>Args</td>
+                                <td>
+                                    {{#each coord.worker_args}}{{#if @index}}, {{/if}}
+                                        <span style="color: #2185d0;">{{@key}}</span>=<b>{{this}}</b>{{/each}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Plugins</td>
+                                <td>{{coord.worker_config.plugins}}</td>
+                            </tr>
+                            <tr>
+                                <td>Terminate Timeout</td>
+                                <td>{{coord.term_timeout}} <div class="ui label">second(s)</div></td>
+                            </tr>
+                            <tr>
+                                <td>Kill Timeout</td>
+                                <td>{{coord.kill_timeout}} <div class="ui label">second(s)</div></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
 
-                <h2 class="ui header">Event Loop</h2>
-                <table class="ui green definition table">
-                    <tr>
-                        <td>Policy</td>
-                        <td>{{event_loop.policy}}</td>
-                    </tr>
-                    <tr>
-                        <td>Debug</td>
-                        <td>
-                            <div class="ui toggle checkbox">
-                                <input type="checkbox" disabled="disabled"
-                                    {{#if event_loop.debug}}checked=""{{/if}}/>
-                                <label></label>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Loop</td>
-                        <td>{{event_loop.loop}}</td>
-                    </tr>
-                </table>
+                <div class="ui accordion">
+                    <div class="title active">
+                        <i class="dropdown icon"></i><b>Event Loop</b>
+                    </div>
+                    <div class="content active">
+                        <table class="ui green definition table">
+                            <tr>
+                                <td>Policy</td>
+                                <td>{{event_loop.policy}}</td>
+                            </tr>
+                            <tr>
+                                <td>Debug</td>
+                                <td>
+                                    <div class="ui toggle checkbox">
+                                        <input type="checkbox" disabled="disabled"
+                                            {{#if event_loop.debug}}checked=""{{/if}}/>
+                                        <label></label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Loop</td>
+                                <td>{{event_loop.loop}}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                 <div class="ui accordion">
+                    <div class="title active">
+                        <i class="dropdown icon"></i><b>Logging</b>
+                    </div>
+                    <div class="content active">
+                        <table class="ui orange definition table">
+                            <tr>
+                                <td>Level</td>
+                                <td>{{coord.worker_settings.logging.level}}</td>
+                            </tr>
+                            <tr>
+                                <td>Kind</td>
+                                <td>{{coord.worker_settings.logging.kind}}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
                    
-                <h2 class="ui header">Logging</h2>
-                <table class="ui orange definition table">
-                    <tr>
-                        <td>Level</td>
-                        <td>{{coord.worker_settings.logging.level}}</td>
-                    </tr>
-                    <tr>
-                        <td>Kind</td>
-                        <td>{{coord.worker_settings.logging.kind}}</td>
-                    </tr>
-                </table>
-                   
-
             </script>
         </div>
 

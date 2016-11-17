@@ -3,14 +3,29 @@
 """
 
 import asyncio
+import datetime
+import os
 import platform
+import psutil
 from .. import util
 from .... import coordinator
 
+psutil.cpu_percent(interval=None)  # seed
+
 
 class AboutResource(util.Resource):
+    """ Information about this AIOCluster stack and platform. """
+
+    use_docstring = True
 
     async def get(self, request):
+        try:
+            return self._cache
+        except AttributeError:
+            self._cache = c =  self._get()
+            return c
+
+    def _get(self):
         coord = coordinator.get_coordinator()
         evpolicy = type(asyncio.get_event_loop_policy())
         evloop = type(coord._loop)
@@ -33,10 +48,14 @@ class AboutResource(util.Resource):
                 "term_timeout": coord.term_timeout,
                 "kill_timeout": coord.kill_timeout,
             },
-            "platform": {
+            "system": {
                 "system": platform.system(),
                 "machine": platform.machine(),
                 "python_implementation": platform.python_implementation(),
                 "python_version": platform.python_version(),
+                "cpu_count": os.cpu_count(),
+                "boot_time": '%sZ' % datetime.datetime.fromtimestamp(
+                    psutil.boot_time()),
+                "memory": psutil.virtual_memory().total,
             }
         }

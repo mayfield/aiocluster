@@ -9,6 +9,9 @@ from .... import coordinator
 
 
 class MemoryResource(util.Resource):
+    """ Memory utilization counters by object type. """
+
+    use_docstring = True
 
     @property
     def coord(self):

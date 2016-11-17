@@ -31,11 +31,10 @@ class DiagService(object):
 
     async def start(self):
         self._app = web.Application(loop=self._loop)
+        api.router.attach(self._app, '/api')
         for x in ('/', '/ui', '/ui/'):
             self._app.router.add_route('GET', x, self.about_redir)
         self._app.router.add_route('GET', '/health', self.health)
-        self._app.router.add_route('GET', '/api', api.router.directory)
-        self._app.router.add_route('*', '/api/{path:.*}', api.router.root)
         self._app.router.add_static('/ui', self.ui_dir)
         self._handler = self._app.make_handler()
         listen = self.addr, self.port

@@ -7,6 +7,10 @@ body {
     margin-right: 1em;
 }
 
+.ui.menu .dropdown.item > .icon {
+    margin-top: .10em;
+}
+
 .main.container {
     margin-top: 5em;
     margin-bottom: 8em;
