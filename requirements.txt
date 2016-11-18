@@ -2,5 +2,5 @@ aionanomsg>=1.1
 aiohttp
 msgpack-python
 shellish>=3
-psutil
+psutil>=5
 requests
