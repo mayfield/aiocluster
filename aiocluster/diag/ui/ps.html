@@ -21,8 +21,8 @@
         <script href="templates/header.html" type="text/x-template"></script>
 
         <div class="ui main container">
-            <script id="procs-template" type="text/x-template">
-                <h3 class="ui header">Overall Statistics</h3>
+
+            <script id="stats-template" type="text/x-template">
                 <div class="ui statistics">
                     <div class="statistic">
                         <div class="label">Workers</div>
@@ -39,62 +39,59 @@
                         <div class="label">CPU</div>
                         <div class="value">{{percent cpu_total}}</div>
                     </div>
+                    <div class="statistic">
+                        <div class="label">Open Files</div>
+                        <div class="value">{{open_files_total}}</div>
+                    </div>
                 </div>
-
-                <h3 class="ui header">Coordinator</h3>
-                <table class="ui table">
-                    <thead>
-                        <tr>
-                            <th>Worker</th>
-                            <th>PID</th>
-                            <th>Status</th>
-                            <th>Memory</th>
-                            <th>CPU</th>
-                            <th>Age</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{#each workers}}
-                            <tr>
-                                <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
-                                <td>{{this.pid}}</td>
-                                <td>{{this.status}}</td>
-                                <td>{{humanbytes this.memory.rss}}</td>
-                                <td>{{percent this.cpu_percent}}</td>
-                                <td>{{humantime this.age}}</time></td>
-                            </tr>
-                        {{/each}}
-                    </tbody>
-                </table>
-
-                <h3 class="ui header">Worker Processes</h3>
-                <table class="ui table">
-                    <thead>
-                        <tr>
-                            <th>Worker</th>
-                            <th>PID</th>
-                            <th>Status</th>
-                            <th>Memory</th>
-                            <th>CPU</th>
-                            <th>Age</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{#each workers}}
-                            <tr>
-                                <td><i class="user icon"></i><sup>{{this.ident}}</sup></td>
-                                <td>{{this.pid}}</td>
-                                <td>{{this.status}}</td>
-                                <td>{{humanbytes this.memory.rss}}</td>
-                                <td>{{percent this.cpu_percent}}</td>
-                                <td>{{humantime this.age}}</time></td>
-                            </tr>
-                        {{/each}}
-                    </tbody>
-                </table>
             </script>
+            <div id="stats-holder"></div>
+            
+            <table class="ui table">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>PID</th>
+                        <th>Memory</th>
+                        <th>CPU</th>
+                        <th>Status</th>
+                        <th>Open Files</th>
+                        <th>Age</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <script id="procs-template" type="text/x-template">
+                    <tr class="active">
+                        <td><sup><i class="female icon"></i></sup>Coordinator</td>
+                        <td>{{coordinator.pid}}</td>
+                        <td>{{humanbytes coordinator.memory.rss}}</td>
+                        <td>{{percent coordinator.cpu_percent}}</td>
+                        <td>{{coordinator.status}}</td>
+                        <td>{{coordinator.open_files}}</td>
+                        <td>{{humantime coordinator.age}}</td>
+                        <td></td>
+                    </tr>
+
+                    {{#each workers}}
+                        <tr>
+                            <td><sup><i class="user icon"></i></sup>Worker - {{this.ident}}</td>
+                            <td>{{this.pid}}</td>
+                            <td>{{humanbytes this.memory.rss}}</td>
+                            <td>{{percent this.cpu_percent}}</td>
+                            <td>{{this.status}}</td>
+                            <td>{{this.open_files}}</td>
+                            <td>{{humantime this.age}}</td>
+                            <td><div class="ui tiny button" onClick="kill_worker({{this.ident}})">Kill</div></td>
+                        </tr>
+                    {{/each}}
+                </script>
+                <tbody id="procs-holder"></tbody>
+
+            </table>
         </div>
 
         <script href="templates/footer.html" type="text/x-template"></script>
+
     </body>
 </html>

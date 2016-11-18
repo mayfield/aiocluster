@@ -88,20 +88,22 @@ aioc.util.as_completed = function*(promises) {
     }
 };
 
+aioc.api.request = function(method, path, data) {
+    const request = {
+        url: '/api/v1/' + path,
+        method: method,
+    };
+    if (data !== undefined) {
+        request.contentType = 'application/json';
+        request.data = JSON.stringify(data);
+    }
+    return $.ajax(request);
+}
 
 aioc.api.get = function(path) {
-    return $.ajax({
-        url: '/api/v1/' + path,
-        method: 'GET'
-    });
+    return aioc.api.request('GET', path);
 };
 
-
 aioc.api.put = function(path, data) {
-    return $.ajax({
-        url: '/api/v1/' + path,
-        method: 'PUT',
-        contentType: 'application/json',
-        data: JSON.stringify(data)
-    });
+    return aioc.api.request('PUT', path, data);
 };

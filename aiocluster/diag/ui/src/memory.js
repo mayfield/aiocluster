@@ -1,18 +1,21 @@
 
 $(document).ready(function() {
     (async function() {
-        let procs_tpl = $.templates("#procs-template");
+        const mem_tpl = Handlebars.compile($('#mem-template').html());
+        const mem_holder = $('#mem-holder');
+
         while (true) {
-            let mem_sum = 0;
-            let cpu_sum = 0;
-            let api_data = await aioc.api.get('memory');
-            
-            api_data.workers.forEach(function(x) {
-                mem_sum += x.memory.rss;
-                cpu_sum += x.cpu_percent;
-            });
-            $('#procs-holder').html(procs_tpl.render(api_data));
-            await sleep(1);
+            let totals = new Map();
+            const data = await aioc.api.get('memory');
+            for (const worker of data) {
+                for (const [type, count] of worker) {
+                    totals.set(type, (totals.get(type) || 0) + count);
+                }
+            }
+            totals = Array.from(totals.entries());
+            totals.sort((a, b) => a[1] < b[1] ? 1 : -1);
+            mem_holder.html(mem_tpl({type: totals}));
+            await aioc.util.sleep(2);
         }
     })();
 });

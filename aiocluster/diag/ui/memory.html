@@ -22,6 +22,27 @@
 
         <div class="ui main container">
 
+            <script id="mem-template" type="text/x-template">
+                <table class="ui table">
+                    <thead>
+                        <tr>
+                            <th>Object Type</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {{#each type}}
+                            <tr>
+                                <td>{{this.[0]}}</td>
+                                <td>{{this.[1]}}</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </script>
+            <div id="mem-holder"></div>
+
         </div>
 
         <script href="templates/footer.html" type="text/x-template"></script>
