@@ -33,7 +33,6 @@ $(document).ready(function() {
             }
             aioc.tpl.render('#stats-template', data);
             aioc.tpl.render('#procs-template', data, 'tbody');
-
             await aioc.util.sleep(1);
         }
     })();

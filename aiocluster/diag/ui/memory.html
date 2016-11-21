@@ -24,7 +24,7 @@
 
             <h2>Object Count</h2>
             <script id="mem-template" type="text/x-template">
-                <table class="ui table">
+                <table class="ui compact table">
                     <thead>
                         <tr>
                             <th>Object Type</th>
@@ -36,7 +36,7 @@
                         {{#each type}}
                             <tr>
                                 <td>{{this.[0]}}</td>
-                                <td>{{this.[1]}}</td>
+                                <td>{{round this.[1]}}</td>
                             </tr>
                         {{/each}}
                     </tbody>
