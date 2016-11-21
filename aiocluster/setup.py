@@ -4,6 +4,7 @@ Handle setup for both coordinator and workers.
 
 import asyncio
 import importlib
+import inspect
 import logging.handlers
 import shellish
 from .worker import command
@@ -93,7 +94,7 @@ def find_worker(spec):
              mymodule.myfunction
     """
     parts = spec.split('.')
-    if len(parts) == 1 or '' in parts:
+    if '' in parts:
         raise ValueError("Invalid Spec")
     final_import_exc = None
     func_parts = None
@@ -107,7 +108,7 @@ def find_worker(spec):
             final_import_exc = e
         else:
             if not func_parts:
-                raise TypeError('Spec refers to a module')
+                raise TypeError('Spec refers to a module: %r' % spec)
             break
     else:
         if final_import_exc:

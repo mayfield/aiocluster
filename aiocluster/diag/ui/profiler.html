@@ -22,12 +22,13 @@
 
         <div class="ui main container">
             <h2 class="ui header">Performance Profiler</h2>
+
             <script id="prof-template" type="text/x-template">
                 <table class="ui table">
                     <thead>
                         <tr>
                             <th>Function</th>
-                            <th>Inline Percent</th>
+                            <th>CPU</th>
                             <th>Inline Time</th>
                             <th>Total Time</th>
                             <th>Time/call</th>
@@ -40,17 +41,17 @@
                             <tr>
                                 <td>{{call}}</td>
                                 <td>{{percent cpu_percent}}</td>
-                                <td>{{toFixed inlinetime 2}}</td>
-                                <td>{{toFixed totaltime 2}}</td>
+                                <td>{{fixed inlinetime 3}}</td>
+                                <td>{{fixed totaltime 3}}</td>
                                 <td>{{round percall_time}}&nbsp;<small>μs</small></td>
-                                <td>{{humanint call_rate}}</td>
-                                <td>{{humanint callcount}}</td>
+                                <td>{{humanint call_rate precision=1}}</td>
+                                <td>{{humanint callcount precision=1}}</td>
                             </tr>
                         {{/each}}
                   </tbody>
                 </table>
             </script>
-            <div id="prof-holder"></div>
+
         </div>
 
         <script href="templates/footer.html" type="text/x-template"></script>

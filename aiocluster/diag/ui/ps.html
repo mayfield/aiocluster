@@ -23,7 +23,7 @@
         <div class="ui main container">
 
             <script id="stats-template" type="text/x-template">
-                <div class="ui statistics">
+                <div class="ui four statistics">
                     <div class="statistic">
                         <div class="label">Workers</div>
                         <div class="value">
@@ -41,19 +41,19 @@
                     </div>
                     <div class="statistic">
                         <div class="label">Open Files</div>
-                        <div class="value">{{open_files_total}}</div>
+                        <div class="value">{{round open_files_total}}</div>
                     </div>
                 </div>
             </script>
-            <div id="stats-holder"></div>
             
-            <table class="ui table">
+            <table class="ui fixed table">
                 <thead>
                     <tr>
                         <th>Role</th>
                         <th>PID</th>
                         <th>Memory</th>
                         <th>CPU</th>
+                        <th>CPU Time</th>
                         <th>Status</th>
                         <th>Open Files</th>
                         <th>Age</th>
@@ -63,10 +63,11 @@
 
                 <script id="procs-template" type="text/x-template">
                     <tr class="active">
-                        <td><sup><i class="female icon"></i></sup>Coordinator</td>
+                        <td><i class="female icon"></i>Coordinator</td>
                         <td>{{coordinator.pid}}</td>
-                        <td>{{humanbytes coordinator.memory.rss}}</td>
+                        <td>{{humanbytes coordinator.memory.rss precision=1}}</td>
                         <td>{{percent coordinator.cpu_percent}}</td>
+                        <td>{{time coordinator.cpu_time}}</td>
                         <td>{{coordinator.status}}</td>
                         <td>{{coordinator.open_files}}</td>
                         <td>{{humantime coordinator.age}}</td>
@@ -75,23 +76,47 @@
 
                     {{#each workers}}
                         <tr>
-                            <td><sup><i class="user icon"></i></sup>Worker - {{this.ident}}</td>
+                            <td><i class="male icon"></i>Worker - {{this.ident}}</td>
                             <td>{{this.pid}}</td>
-                            <td>{{humanbytes this.memory.rss}}</td>
+                            <td>{{humanbytes this.memory.rss precision=1}}</td>
                             <td>{{percent this.cpu_percent}}</td>
+                            <td>{{time this.cpu_time}}</td>
                             <td>{{this.status}}</td>
-                            <td>{{this.open_files}}</td>
+                            <td>{{round this.open_files}}</td>
                             <td>{{humantime this.age}}</td>
-                            <td><div class="ui tiny button" onClick="kill_worker({{this.ident}})">Kill</div></td>
+                            <td><div worker_ident="{{this.ident}}"
+                                     class="ui red tiny kill button">Kill</div></td>
                         </tr>
                     {{/each}}
                 </script>
-                <tbody id="procs-holder"></tbody>
 
             </table>
         </div>
 
         <script href="templates/footer.html" type="text/x-template"></script>
+
+        <script id="kill-template" type="text/x-template">
+            <div id="kill-dialog" class="ui small modal">
+                <div class="header">Worker Kill</i></div>
+                <div class="content">
+                    <p>You are about to kill the following worker...</p>
+                    <table class="ui definition very small compact table">
+                        <tr><td>Worker ID</td><td>{{ident}}</td></tr>
+                        <tr><td>Process ID</td><td>{{pid}}</td></tr>
+                        <tr><td>Age</td><td>{{humantime age}}</td></tr>
+                        <tr><td>Memory Used</td><td>{{humanbytes memory.rss}}</td></tr>
+                        <tr><td>CPU Time</td><td>{{time cpu_times.user}}</td></tr>
+                    </table>
+                </div>
+                <div class="actions">
+                    <div class="ui black deny button">Cancel</div>
+                    <div class="ui red approve right labeled icon button">
+                        Yes, kill worker <i>{{ident}}</i>
+                        <i class="trash icon"></i>
+                    </div>
+                </div>
+            </div>
+        </script>
 
     </body>
 </html>

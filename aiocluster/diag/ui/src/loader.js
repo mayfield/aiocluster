@@ -1,6 +1,5 @@
 "use strict";
 
-var aioc = window.aioc || {};
 aioc.pages = {
     "about.html": {
         title: 'About',

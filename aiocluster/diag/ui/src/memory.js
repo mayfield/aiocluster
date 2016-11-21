@@ -1,9 +1,7 @@
+"use strict";
 
 $(document).ready(function() {
     (async function() {
-        const mem_tpl = Handlebars.compile($('#mem-template').html());
-        const mem_holder = $('#mem-holder');
-
         while (true) {
             let totals = new Map();
             const data = await aioc.api.get('memory');
@@ -14,8 +12,8 @@ $(document).ready(function() {
             }
             totals = Array.from(totals.entries());
             totals.sort((a, b) => a[1] < b[1] ? 1 : -1);
-            mem_holder.html(mem_tpl({type: totals}));
-            await aioc.util.sleep(2);
+            aioc.tpl.render('#mem-template', {type: totals});
+            await aioc.util.sleep(5);
         }
     })();
 });

@@ -179,7 +179,8 @@ class Top(ProfilerMixin, shellish.Command):
             for call, stats in totals.items():
                 if call in prev_totals:
                     prev = prev_totals[call]
-                    sample_total = stats['inlinetime'] - prev['inlinetime']
+                    sample_total = max(stats['inlinetime'] -
+                                       prev['inlinetime'], 0)
                     sample_calls = stats['callcount'] - prev['callcount']
                     stats['cpu_percent'] = sample_total / period
                     stats['call_rate'] = sample_calls / period
@@ -198,7 +199,7 @@ class Top(ProfilerMixin, shellish.Command):
             del stats[height-3:]
             table = shellish.Table(headers=[
                 'Function',
-                'Inline %',
+                'CPU %',
                 'Inline-Time',
                 'Total-Time',
                 'Time/call',

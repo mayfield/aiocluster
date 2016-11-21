@@ -6,10 +6,10 @@ import shellish
 from . import profiler, memory
 
 
-class ControlCommand(shellish.Command):
-    """ Control operations for an AIO Cluster service. """
+class DiagCommand(shellish.Command):
+    """ Diagnostic operations for an AIO Cluster service. """
 
-    name = 'control'
+    name = 'diag'
 
     def setup_args(self, parser):
         self.add_argument('--url', default='http://127.0.0.1:7878',

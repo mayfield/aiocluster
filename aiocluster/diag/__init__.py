@@ -35,6 +35,8 @@ class DiagService(object):
         for x in ('/', '/ui', '/ui/'):
             self._app.router.add_route('GET', x, self.about_redir)
         self._app.router.add_route('GET', '/health', self.health)
+        # Workaround https://github.com/KeepSafe/aiohttp/issues/1412
+        os.environ["AIOHTTP_NOSENDFILE"] = '1'
         self._app.router.add_static('/ui', self.ui_dir)
         self._handler = self._app.make_handler()
         listen = self.addr, self.port

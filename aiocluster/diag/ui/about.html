@@ -29,7 +29,7 @@
 
         <div class="ui main container">
 
-            <script id="procs-template" type="text/x-template">
+            <script id="about-template" type="text/x-template">
 
                 <div class="ui accordion">
                     <div class="title active">
@@ -52,7 +52,7 @@
                             </tr>
                             <tr>
                                 <td>Memory</td>
-                                <td>{{humanbytes system.memory}}</td>
+                                <td>{{humanbytes system.memory precision=2}}</td>
                             </tr>
                         </table>
                     </div>
@@ -68,13 +68,12 @@
                                 <td>Spec</td>
                                 <td>{{coord.worker_spec}}</td>
                             </tr>
-                            <tr>
-                                <td>Args</td>
-                                <td>
-                                    {{#each coord.worker_args}}{{#if @index}}, {{/if}}
-                                        <span style="color: #2185d0;">{{@key}}</span>=<b>{{this}}</b>{{/each}}
-                                </td>
-                            </tr>
+                            {{#each coord.worker_args}}
+                                <tr>
+                                    <td>Arg - <i>{{@key}}</i></td>
+                                    <td>{{this}}</td>
+                                </tr>
+                            {{/each}}
                             <tr>
                                 <td>Plugins</td>
                                 <td>{{coord.worker_config.plugins}}</td>
@@ -119,7 +118,7 @@
                     </div>
                 </div>
 
-                 <div class="ui accordion">
+                <div class="ui accordion">
                     <div class="title active">
                         <i class="dropdown icon"></i><b>Logging</b>
                     </div>

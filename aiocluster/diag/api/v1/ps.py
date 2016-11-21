@@ -57,6 +57,6 @@ class PSResource(util.Resource):
         ident = await self.get_request_content(request)
         coord = coordinator.get_coordinator()
         if ident not in coord.workers:
-            raise ValueError("Invalid worker ident: %s" %ident)
+            raise ValueError("Invalid worker ident: %r" % ident)
         worker = coord.workers[ident]
         worker.util.terminate()
